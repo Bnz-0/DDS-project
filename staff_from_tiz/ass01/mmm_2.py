@@ -34,6 +34,7 @@ class Arrival:
 			heappush(state.events, (state.t + expovariate(1), Completion(self.id, q)))
 		
 		state.fifo[q].append(self.id)
+		state.fifo_lenghts[q] += 1
 
 
 class Completion:
@@ -46,6 +47,7 @@ class Completion:
 		# * update its completion time in state.completions
 		# * insert the termination event for the next job in queue
 		tmp = state.fifo[self.queue_index].popleft()
+		state.fifo_lenghts[self.queue_index] -= 1
 		state.completions[tmp] = state.t
 
 		# check if it was not the last element
@@ -54,19 +56,31 @@ class Completion:
 
 
 class State:
-	def __init__(self, LAMBDA, MAXT, QUEUE_NUMBER = 5):
+	def __init__(self, LAMBDA, MAXT, QUEUE_NUMBER = 10, CHOICES = 10):
 		self.t = 0  # current time in the simulation
 		self.events = [(0, Arrival(0))]  # queue of events to simulate
+
 		self.fifo = [deque() for i in range(QUEUE_NUMBER)] # queue at the server
+		self.fifo_lenghts = [0] * QUEUE_NUMBER
+		self.CHOICES = CHOICES
+
 		self.arrivals = {}  # jobid -> arrival time mapping
 		self.completions = {}  # jobid -> completion time mapping
-		#self.LAMBDA = LAMBDA
+
 		self.LAMBDA = LAMBDA * QUEUE_NUMBER
 		self.MAXT = MAXT
 		self.QUEUE_NUMBER = QUEUE_NUMBER
 	
 	def select_queue(self):
-		return randint(0, self.QUEUE_NUMBER-1)
+		res = randint(0, self.QUEUE_NUMBER-1)
+
+		for i in range(self.CHOICES - 1):
+			tmp = randint(0, self.QUEUE_NUMBER-1)
+			if self.fifo_lenghts[tmp] < self.fifo_lenghts[res]:
+				res = tmp
+		
+		return res
+
 
 
 def start(LAMBDA, MAXT):
