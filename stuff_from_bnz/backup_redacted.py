@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 from heapq import heappush, heappop
 from random import expovariate
 
@@ -15,25 +16,37 @@ YEAR = 365 * DAY
 
 
 ### SYSTEM PARAMETERS
+def get_arg(name, ptype=int):
+	"Get the value of `param`, return `None` if not found"
+	try:
+		return ptype(sys.argv[
+			sys.argv.index(name) + 1
+		])
+	except ValueError:
+		return None
 
-N = 10  # number of servers storing data
-K = 8  # number of blocks needed to recover data
+if 'help' in sys.argv:
+	print(f"Usage:\n$ {sys.argv[0]} [N [K]]")
+	sys.exit(0)
+
+N = get_arg('N') or 10  # number of servers storing data
+K = get_arg('K') or 8  # number of blocks needed to recover data
 
 # parameters about the node backing up the data
-NODE_LIFETIME = 30 * DAY  # average time before node crashes and loses data
-NODE_UPTIME = 8 * HOUR  # average time spent online by the node
-NODE_DOWNTIME = 16 * HOUR  # average time spent offline
-DATA_SIZE = 100 * GB  # amount of data to backup
-UPLOAD_SPEED = 500 * KB  # node's speed, per second
-DOWNLOAD_SPEED = 2 * MB  # per second
+NODE_LIFETIME = (get_arg('NODE_LIFETIME') or 30) * DAY  # average time before node crashes and loses data
+NODE_UPTIME = (get_arg('NODE_UPTIME') or 8) * HOUR  # average time spent online by the node
+NODE_DOWNTIME = (get_arg('NODE_DOWNTIME') or 16) * HOUR  # average time spent offline
+DATA_SIZE = (get_arg('DATA_SIZE') or 100) * GB  # amount of data to backup
+UPLOAD_SPEED = (get_arg('UPLOAD_SPEED') or 500) * KB  # node's speed, per second
+DOWNLOAD_SPEED = (get_arg('DOWNLOAD_SPEED') or 2) * MB  # per second
 
 # parameters as before, for the server
-SERVER_LIFETIME = 365 * DAY
-SERVER_UPTIME = 30 * DAY
-SERVER_DOWNTIME = 2 * HOUR
+SERVER_LIFETIME = (get_arg('SERVER_LIFETIME') or 365) * DAY
+SERVER_UPTIME = (get_arg('SERVER_UPTIME') or 30) * DAY
+SERVER_DOWNTIME = (get_arg('SERVER_DOWNTIME') or 2) * HOUR
 
 # length of the simulation
-MAXT = 100 * YEAR
+MAXT = (get_arg('MAXT') or 100) * YEAR
 
 block_size = DATA_SIZE / K
 upload_duration = block_size / UPLOAD_SPEED
@@ -117,14 +130,14 @@ class State:
 		if sum(blocks_saved) < K:
 			raise GameOver
 
-# events
+###### events ######
 
 class ServerEvent:
 	"""Class with a self.server attribute."""
 
 	def __init__(self, server):
 		self.server = server
-	def __str__(self):  # function to get a pretty printed name for the event
+	def __str__(self):
 		return f'{self.__class__.__name__}({self.server})'
 
 
@@ -136,11 +149,8 @@ class UploadComplete(ServerEvent):
 			state.remote_blocks[self.server] = True
 		state.schedule_next_upload() # schedule a new upload anyway
 
-#        if state.current_upload is not self:
-			# this upload was interrupted, we ignore this event
-#            return
-#        state.remote_blocks[self.server] = True
-#        state.schedule_next_upload()
+	def __str__(self):
+		return f'{self.__class__.__name__}({self.server})'
 
 
 class DownloadComplete(ServerEvent):
@@ -154,6 +164,10 @@ class DownloadComplete(ServerEvent):
 		else:
 			state.schedule_next_download()
 
+	def __str__(self):
+		return f'{self.__class__.__name__}({self.server})'
+
+
 class NodeOnline:
 	"""Our node went online."""
 
@@ -166,6 +180,10 @@ class NodeOnline:
 		# schedule the next offline event
 		state.schedule(exp_rv(NODE_UPTIME), NodeOffline())
 
+	def __str__(self):
+		return f'{self.__class__.__name__}'
+
+
 class NodeOffline:
 	"""Our node went offline."""
 
@@ -177,6 +195,9 @@ class NodeOffline:
 		# schedule the next online event
 		state.schedule(exp_rv(NODE_DOWNTIME), NodeOnline())
 
+	def __str__(self):
+		return f'{self.__class__.__name__}'
+
 
 class NodeFail(NodeOffline):
 	"""Our node failed and lost all its data."""
@@ -186,6 +207,9 @@ class NodeFail(NodeOffline):
 		state.local_blocks = [False] * N
 		state.check_game_over()
 		super().process(state)
+
+	def __str__(self):
+		return f'{self.__class__.__name__}'
 
 
 class ServerOnline(ServerEvent):
@@ -205,6 +229,9 @@ class ServerOnline(ServerEvent):
 		if state.current_download is None:
 			state.schedule_next_download()
 
+	def __str__(self):
+		return f'{self.__class__.__name__}({self.server})'
+
 class ServerOffline(ServerEvent):
 	"""A server went offline."""
 
@@ -216,7 +243,6 @@ class ServerOffline(ServerEvent):
 		state.schedule(exp_rv(SERVER_DOWNTIME), ServerOnline(server))
 
 		# interrupt any current uploads/downloads to this server
-
 		cu = state.current_upload
 		if cu is not None and cu.server == server:
 			state.current_upload = None
@@ -224,6 +250,9 @@ class ServerOffline(ServerEvent):
 		cd = state.current_download
 		if cd is not None and cd.server == server:
 			state.current_download = None
+
+	def __str__(self):
+		return f'{self.__class__.__name__}({self.server})'
 
 
 class ServerFail(ServerOffline):
@@ -234,6 +263,9 @@ class ServerFail(ServerOffline):
 		state.check_game_over()
 		super().process(state)
 
+	def __str__(self):
+		return f'{self.__class__.__name__}({self.server})'
+
 
 state = State()
 events = state.events
@@ -243,7 +275,7 @@ try:
 		t, event = heappop(events)
 		if t > MAXT:
 			break
-		#print(f'{t / DAY:10.2f} {event}')
+		print(f'{t / DAY:10.2f} {event}')
 		state.t = t
 		event.process(state)
 except GameOver:
