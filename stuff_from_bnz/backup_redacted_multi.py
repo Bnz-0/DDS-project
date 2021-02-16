@@ -2,7 +2,7 @@
 
 import sys
 from heapq import heappush, heappop
-from random import expovariate
+from random import expovariate, randint
 
 # Shortcut constants
 
@@ -123,15 +123,15 @@ class State:
 
 		# if the node is online, upload a possessed local block to an online
 		# server that doesn't have it (if possible)
-		if not self.node_online: return
-		self.current_upload = None
-		for i in range(N): #TODO: upload before all the blocks, and not the same block on all the servers
-			if not self.local_blocks[i]:
-				continue
-			for j in range(N):
-				if self.servers[j].can_have(i) and not self.servers[j].have(i):
+		if not self.node_online or self.current_upload is not None:
+			return
+		for j in range(N): # j-th server
+			for i in range(N): # i-th block
+				if self.local_blocks[i] and self.servers[j].can_have(i) and not self.servers[j].have(i):
 					self.current_upload = UploadComplete(j, i)
 					break
+			if self.current_upload is not None:
+				break
 		if self.current_upload is None: return # all backed up
 		self.schedule(upload_duration, self.current_upload)
 
@@ -140,16 +140,17 @@ class State:
 
 		# if the node is online, download a remote block the node doesn't
 		# have from an online server which has it (if possible)
-		if not self.node_online: return
-		self.current_download = None
-
-		for i in range(N):
+		if not self.node_online or self.current_download is not None:
+			return
+		for i in range(N): # i-th block
 			if self.local_blocks[i]:
 				continue
-			for j in range(N):
+			for j in range(N): # j-th server
 				if self.servers[j].have(i):
 					self.current_download = DownloadComplete(j, i)
 					break
+			if self.current_download is not None:
+				break
 		if self.current_download is None: return # all in local
 		self.schedule(download_duration, self.current_download)
 
@@ -185,18 +186,23 @@ class UploadComplete(ServerEvent):
 
 	def process(self, state):
 		if state.current_upload is self: #the upload was not interrupted
+			print(" [DONE]", end='')
 			state.servers[self.server].store(self.block)
-		state.schedule_next_upload() # schedule a new upload anyway
+		else: print(" [FAIL]", end='')
+		if state.node_online:
+			state.schedule_next_upload()
 
 class DownloadComplete(ServerEvent):
 	"""A download is completed."""
 
 	def process(self, state):
 		if state.current_download is self:
+			print(" [DONE]", end='')
 			state.local_blocks[self.server] = True
+		else: print(" [FAIL]", end='')
 		if sum(state.local_blocks) >= K:  # we have enough data to reconstruct all blocks
 			state.local_blocks = [True] * N
-		else:
+		elif state.node_online:
 			state.schedule_next_download()
 
 class NodeOnline:
@@ -291,17 +297,15 @@ class ServerFail(ServerOffline):
 state = State()
 events = state.events
 
-#TODO: better log of events, now isn't clear if an upload/download fails
-
 try:
 	while events:
 		t, event = heappop(events)
 		if t > MAXT:
 			break
-		print(f'{t / DAY:10.2f} {event}')
+		print(f'\n{t / DAY:10.2f} {event}', end='')
 		state.t = t
 		event.process(state)
 except GameOver:
-	print(f"Game over after {t/YEAR:.2f} years!")
+	print(f"\nGame over after {t/YEAR:.2f} years!")
 else:  # no exception
-	print(f"Data safe for {t/YEAR:.2f} years!")
+	print(f"\nData safe for {t/YEAR:.2f} years!")
