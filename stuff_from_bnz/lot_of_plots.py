@@ -14,7 +14,8 @@ args = {
 	'SERVER_LIFETIME': None,
 	'SERVER_UPTIME': None,
 	'SERVER_DOWNTIME': None,
-	'MAXTMULTI_BLOCK_SERVER': None,
+	'MAXT': None,
+	'MULTI_BLOCK_SERVER': None,
 }
 
 def flat(d):
