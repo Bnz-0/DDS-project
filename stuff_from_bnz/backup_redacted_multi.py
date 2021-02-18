@@ -2,7 +2,7 @@
 
 import sys
 from heapq import heappush, heappop
-from random import expovariate, randint
+from random import expovariate
 
 # Shortcut constants
 
@@ -49,10 +49,7 @@ SERVER_DOWNTIME = (get_arg('SERVER_DOWNTIME') or 2) * HOUR
 MAXT = (get_arg('MAXT') or 100) * YEAR
 
 # additional parameters
-#MULTI_BLOCK_SERVER = get_arg('MULTI_BLOCK_SERVER', bool) or False # if True a server can store multiple blocks
 N_BLOCK_SERVER = N if get_arg('MULTI_BLOCK_SERVER', lambda x: x=='True') else 1 # if True a server can store multiple blocks
-
-print('N_BLOCK_SERVER', N_BLOCK_SERVER)
 
 block_size = DATA_SIZE / K
 upload_duration = block_size / UPLOAD_SPEED
@@ -175,10 +172,8 @@ class ServerEvent:
 	def __init__(self, server, block=None):
 		self.server = server
 		self.block = block
-	def __repr__(self):
-		return f'{self.__class__.__name__}({self.server}, {self.block})'
 	def __str__(self):
-		return repr(self)
+		return f'{self.__class__.__name__}({self.server},{self.block})'
 
 
 class UploadComplete(ServerEvent):
@@ -306,6 +301,6 @@ try:
 		state.t = t
 		event.process(state)
 except GameOver:
-	print(f"\nGame over after {t/YEAR:.2f} years!")
+	print(f"\n{t/DAY:10.2f} GameOver({t/YEAR:.2f})")
 else:  # no exception
-	print(f"\nData safe for {t/YEAR:.2f} years!")
+	print(f"\n{t/DAY:10.2f} DataSafe({t/YEAR:.2f})")
