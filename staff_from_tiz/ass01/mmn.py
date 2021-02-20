@@ -4,8 +4,8 @@ from collections import deque
 from heapq import heappush, heappop
 from random import expovariate, randint
 
-MAXT = 1000000
-LAMBDA = 0.7
+MAXT = 10000000
+LAMBDA = 0.99
 
 
 class Arrival:

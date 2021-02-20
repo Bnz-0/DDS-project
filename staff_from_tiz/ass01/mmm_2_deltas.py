@@ -3,11 +3,14 @@
 from collections import deque
 from heapq import heappush, heappop
 from random import expovariate, randint, random
-import time
+import time, sys, multiprocessing
 
 
-MAXT = 1000000
-LAMBDA = 0.7
+MAXT = 100_000
+LAMBDA = 0.5
+
+values_sum = 0
+values_count = 0
 
 class Event:
 	def __lt__(self, other):
@@ -47,11 +50,14 @@ class Completion(Event):
 		self.queue_index = queue_index
 	
 	def process(self, state):
+		global values_sum, values_count
 		# * remove the first job from the FIFO queue
 		# * update its completion time in state.completions
 		# * insert the termination event for the next job in queue
 		tmp = state.fifo[self.queue_index].popleft()
-		state.completions[tmp] = state.t
+		if state.t < 10_000:
+			values_sum += state.t - state.arrivals[tmp]
+			values_count += 1
 
 		# check if it was not the last element
 		if len(state.fifo[self.queue_index]):
@@ -86,6 +92,11 @@ class State:
 
 
 def start(LAMBDA = 0.7, MAXT = 1000000, NSAMPLINGS = 100, QUEUE_NUMBER = 10, CHOICES = 2):
+	outfile = None
+	f = open(f"results/{QUEUE_NUMBER}queue/mmm_results_{CHOICES}_{LAMBDA}.md", "w")
+	# outfile = f
+	sys.stdout = f
+	print("================= NEW EXECUTION =================")
 	print(f"Starting:\n\tLAMBDA = {LAMBDA},\n\tMAXT = {MAXT},\n\tNSAMPLINGS = {NSAMPLINGS},\n\tQUEUE_NUMBER = {QUEUE_NUMBER},\n\tCHOICES = {CHOICES}\n")
 	state = State(LAMBDA, MAXT, QUEUE_NUMBER, CHOICES)
 	events = state.events
@@ -95,7 +106,7 @@ def start(LAMBDA = 0.7, MAXT = 1000000, NSAMPLINGS = 100, QUEUE_NUMBER = 10, CHO
 	sampling_interval = MAXT / NSAMPLINGS
 	last_sampling = sampling_interval
 
-	start = time.time()
+	# start = time.time()
 
 	while events:
 		t, event = heappop(events)
@@ -103,19 +114,34 @@ def start(LAMBDA = 0.7, MAXT = 1000000, NSAMPLINGS = 100, QUEUE_NUMBER = 10, CHO
 		#   break
 
 		if last_sampling <= t:
-			samplings.append({"queue_len":[len(f) for f in state.fifo], "t": state.t})
+			print(f"{CHOICES} - {LAMBDA} - reached step: {last_sampling}", end="\n", file=sys.stderr)
+			# samplings.append({"queue_len":[len(f) for f in state.fifo], "t": state.t})
 			last_sampling += sampling_interval
 		
 		state.t = t
 		event.process(state)
 	
-	end = time.time()
-	print(end - start)
+	# end = time.time()
+	# print(end - start)
+
+	print(values_sum, values_count)
+	mean = values_sum / values_count
+	print(f"Mean time is : {mean}")
 	
 	return state, samplings
 
-# state = start(LAMBDA, MAXT)
+jobs = []
+for cho in [1, 2, 3, 5]:
+	for lam in [0.99]:
+		values_sum = 0
+		values_count = 0
+		p = multiprocessing.Process(target=start, args=(lam,100000, 10, 500, cho))
+		#state = start(lam, 100000, 10, 100, cho)
+		p.start()
+		jobs.append(p)
 
+for p in jobs:
+	p.join()
 # deltas = {}
 # values_sum = 0
 # values_count = 0

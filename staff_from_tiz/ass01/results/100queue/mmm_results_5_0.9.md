@@ -1,0 +1,10 @@
+================= NEW EXECUTION =================
+Starting:
+	LAMBDA = 0.9,
+	MAXT = 100000,
+	NSAMPLINGS = 10,
+	QUEUE_NUMBER = 100,
+	CHOICES = 5
+
+1524292.2524685464 901217
+Mean time is : 1.6913709489152406
