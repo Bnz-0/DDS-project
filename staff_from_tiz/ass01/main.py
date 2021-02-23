@@ -3,7 +3,7 @@ import sys
 """
 TODO mm1:
 - plottare lunghezza fifo con lambda < 1, = 1, > 1
-- plottare lunghezza fifo con lambda = 0.5, = 0.7, =0.9 o cose così
+- plottare lunghezza fifo con lambda = 0.5, = 0.7, = 0.9 o cose così
 
 TODO mmm:
 - plottare lunghezze fifo
@@ -14,13 +14,25 @@ TODO mmm:
 
 if sys.argv[1].lower() == "mm1":
   import mm1_redacted as mm1
-  state, samplings = mm1.start(0.7, 1000000, 100000)
-  tot_len = 0
-  for x in samplings:
-    tot_len += x['queue_len']
-  print("number of samplings: ", len(samplings))
-  print("mean: ", tot_len/len(samplings))
-  pass
+  len_results = []
+  for lam in [0.5,0.7,0.8,0.9,0.99,1,1.001,1.01]:
+    state, samplings = mm1.start(lam, 1000000, 100)
+    tot_len = 0
+    samplings_lengths = []
+
+    for x in samplings:
+      tot_len += x['queue_len']
+      samplings_lengths.append(x['queue_len'])
+
+    len_results.append(f"{lam}:{samplings_lengths}")
+
+    print("number of samplings: ", len(samplings))
+    print(f"Mean lengths is : {tot_len/len(samplings)}")
+    print(f"Mean lengths expected is : {lam/(1-lam) if lam != 1 else 'inf'}\n")
+  
+  with open('results/mm1_lengths.txt','w') as f:
+      f.write('\n'.join(len_results))
+  
 elif sys.argv[1].lower() == "mmn":
   pass
 elif sys.argv[1].lower() == "mmm":

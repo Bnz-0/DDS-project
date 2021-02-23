@@ -87,21 +87,21 @@ def start(LAMBDA = 0.7, MAXT = 1000000, NSAMPLINGS = 2):
 	
 	return state, samplings
 
-state, samplings = start(LAMBDA, MAXT)
+# state, samplings = start(LAMBDA, MAXT)
 
-deltas = {}
-values_sum = 0
-values_count = 0
-for k_arr, v_arr in state.arrivals.items():
-	dt = state.completions[k_arr] - v_arr
-	deltas[k_arr] = dt
-	values_sum += dt
-	values_count += 1
+# deltas = {}
+# values_sum = 0
+# values_count = 0
+# for k_arr, v_arr in state.arrivals.items():
+# 	dt = state.completions[k_arr] - v_arr
+# 	deltas[k_arr] = dt
+# 	values_sum += dt
+# 	values_count += 1
 
-mean = values_sum / values_count
+# mean = values_sum / values_count
 
-print(f"Mean time is : {mean}")
-print(f"Mean time expected is : {1/(1-LAMBDA)}")
+# print(f"Mean time is : {mean}")
+# print(f"Mean time expected is : {1/(1-LAMBDA)}")
 
 # process state.arrivals and state.completions, find average time spent
 # in the system, and compare it with the theoretical value of 1 / (1 - LAMBDA)
