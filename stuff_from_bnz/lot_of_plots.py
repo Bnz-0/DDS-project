@@ -5,8 +5,8 @@ import subprocess as sub
 import matplotlib.pyplot as plt
 
 class Event:
-	def __init__(self, f, name, done):
-		self.f = f
+	def __init__(self, time, name, done):
+		self.time = time
 		self.name = name
 		self.done = done
 
@@ -21,7 +21,7 @@ class Event:
 		return self.name[self.name.find(',')+1 : self.name.find(')')]
 
 	def __str__(self):
-		return f"{self.f:.2f} {self.name} {self.done}"
+		return f"{self.time:.2f} {self.name} {self.done}"
 
 	@staticmethod
 	def parse(line):
@@ -57,12 +57,6 @@ def run():
 
 
 class Plots:
-	'''
-	=== multi-run plots
-	- iterating over an input, plot after how many years you got a GameOver
-
-	'''
-
 	@staticmethod
 	def count_events(events):
 		return Counter((e.name for e in events))
@@ -83,20 +77,38 @@ class Plots:
 		u_fails.pop()
 		# plotting
 		for fails, blocks, title in [(d_fails, d_blocks, "Download"), (u_fails, u_blocks, "Upload")]:
+			plt.title(f"No of {title} fails before a success")
+			plt.xlabel("No of fails")
+			plt.ylabel("Block id")
 			plt.bar(range(len(fails)), fails, tick_label=blocks)
-			plt.title(title+" fails") # TODO: better title
 			plt.show()
 
 	@staticmethod
-	def plot_(var, var_range, n_iter=1):
-		# var: name of the input variable to change
-		# var_range: tuple (init, end, step)
-		# n_iter: #time run() wit the same input
-		assert False, "TODO"
+	def plot_game_overs(var, var_range, n_iter):
+		original_value = args[var]
+		values = [] ; avg_timing = []
+		for v in var_range:
+			print(f"Running using {var} = {v} for {n_iter} times")
+			args[var] = v
+			values.append(v)
+			avg_timing.append(sum(run()[-1].time for _ in range(n_iter)) / n_iter / 365)
+
+		args[var] = original_value
+		# plotting
+		plt.title(f"Years of data safe ({n_iter} iteration) (Max: {args['MAXT']})")
+		plt.xlabel(var)
+		plt.ylabel("Years")
+		plt.plot(values, avg_timing)
+		plt.show()
 
 EVENTS = run()
-
 print(EVENTS[-1])
 
 print(Plots.count_events(EVENTS))
 Plots.plot_fails(EVENTS)
+Plots.plot_game_overs('NODE_LIFETIME', range(10,41,5), 2)
+
+
+# TODOs:
+# - safeness? (a metric to get how your data is safe at that moment,
+#              which depends on N, K, #local_blocks at time t, #remote_blocks at time t)
