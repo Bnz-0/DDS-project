@@ -84,7 +84,7 @@ class Plots:
 			plt.show()
 
 	@staticmethod
-	def plot_game_overs(var, var_range, n_iter):
+	def plot_game_overs(var, var_range, n_iter, plotter = None):
 		original_value = args[var]
 		values = [] ; avg_timing = []
 		for v in var_range:
@@ -95,10 +95,23 @@ class Plots:
 
 		args[var] = original_value
 		# plotting
+		if plotter is None:
+	   		plt.title(f"Years of data safe ({n_iter} iteration) (Max: {args['MAXT']})")
+	   		plt.xlabel(var)
+	   		plt.ylabel("Years")
+	   		plt.plot(values, avg_timing)
+	   		plt.show()
+		else: plotter(values, avg_timing)
+
+	@staticmethod
+	def plot_game_overs_comparison(var_list, var_range, n_iter):
+		# not super usable since to be meaningful the var_range must be the same
+		# and many vars have a different value meaning
 		plt.title(f"Years of data safe ({n_iter} iteration) (Max: {args['MAXT']})")
-		plt.xlabel(var)
 		plt.ylabel("Years")
-		plt.plot(values, avg_timing)
+		for var in var_list:
+			Plots.plot_game_overs(var, var_range, n_iter, plt.plot)
+		plt.legend(var_list)
 		plt.show()
 
 EVENTS = run()
@@ -106,8 +119,8 @@ print(EVENTS[-1])
 
 print(Plots.count_events(EVENTS))
 Plots.plot_fails(EVENTS)
-Plots.plot_game_overs('NODE_LIFETIME', range(10,41,5), 2)
 
+Plots.plot_game_overs_comparison(['NODE_LIFETIME','SERVER_LIFETIME'], range(10,41,5), 1)
 
 # TODOs:
 # - safeness? (a metric to get how your data is safe at that moment,
