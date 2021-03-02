@@ -44,6 +44,12 @@ args = {
 	'MULTI_BLOCK_SERVER': False,
 }
 
+def add_plot_title(title):
+	plt.suptitle(title, va='center', weight='bold')
+	plt.title(f"[N={args['N']}, K={args['K']}, {'multiple blocks' if args['MULTI_BLOCK_SERVER'] else 'single block'} per server]",
+		{'verticalalignment':'center'}
+	)
+
 def flat(d):
 	flat_args = []
 	for k,v in d.items():
@@ -77,7 +83,7 @@ class Plots:
 		u_fails.pop()
 		# plotting
 		for fails, blocks, title in [(d_fails, d_blocks, "Download"), (u_fails, u_blocks, "Upload")]:
-			plt.title(f"No of {title} fails before a success")
+			add_plot_title(f"No of {title} fails before a success")
 			plt.xlabel("No of fails")
 			plt.ylabel("Block id")
 			plt.bar(range(len(fails)), fails, tick_label=blocks)
@@ -96,7 +102,7 @@ class Plots:
 		args[var] = original_value
 		# plotting
 		if plotter is None:
-	   		plt.title(f"Years of data safe ({n_iter} iteration) (Max: {args['MAXT']})")
+	   		add_plot_title(f"Years of data safe ({n_iter} iteration) (Max: {args['MAXT']})")
 	   		plt.xlabel(var)
 	   		plt.ylabel("Years")
 	   		plt.plot(values, avg_timing)
@@ -107,20 +113,20 @@ class Plots:
 	def plot_game_overs_comparison(var_list, var_range, n_iter):
 		# not super usable since to be meaningful the var_range must be the same
 		# and many vars have a different value meaning
-		plt.title(f"Years of data safe ({n_iter} iteration) (Max: {args['MAXT']})")
+		add_plot_title(f"Years of data safe ({n_iter} iteration) (Max: {args['MAXT']})")
 		plt.ylabel("Years")
 		for var in var_list:
 			Plots.plot_game_overs(var, var_range, n_iter, plt.plot)
 		plt.legend(var_list)
 		plt.show()
 
-EVENTS = run()
-print(EVENTS[-1])
+#EVENTS = run()
+#print(EVENTS[-1])
 
-print(Plots.count_events(EVENTS))
-Plots.plot_fails(EVENTS)
+#print(Plots.count_events(EVENTS))
+#Plots.plot_fails(EVENTS)
 
-Plots.plot_game_overs_comparison(['NODE_LIFETIME','SERVER_LIFETIME'], range(10,41,5), 1)
+Plots.plot_game_overs_comparison(['NODE_LIFETIME','SERVER_LIFETIME'], range(10,41,5), 2)
 
 # TODOs:
 # - safeness? (a metric to get how your data is safe at that moment,
