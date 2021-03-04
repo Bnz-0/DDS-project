@@ -63,6 +63,27 @@ def run():
 
 
 class Plots:
+	_filename = None
+	_add_info = None
+
+	@staticmethod
+	def _plot_out():
+		if Plots._add_info:
+			plt.annotate(f"{Plots._add_info} = {args[Plots._add_info]}",
+				(0,0), (-30,-20),
+				xycoords='axes fraction', textcoords='offset points', va='top'
+			)
+		if Plots._filename:
+			plt.savefig(f"img/{Plots._filename}.png", format="png")
+			plt.close()
+		else:
+			plt.show()
+
+	@staticmethod
+	def set_output(filename, add_info=None):
+		Plots._filename = filename
+		Plots._add_info = add_info
+
 	@staticmethod
 	def count_events(events):
 		return Counter((e.name for e in events))
@@ -82,12 +103,24 @@ class Plots:
 		d_fails.pop() # the last is always 0
 		u_fails.pop()
 		# plotting
+		original_filename = Plots._filename
 		for fails, blocks, title in [(d_fails, d_blocks, "Download"), (u_fails, u_blocks, "Upload")]:
 			add_plot_title(f"No of {title} fails before a success")
 			plt.xlabel("No of fails")
 			plt.ylabel("Block id")
 			plt.bar(range(len(fails)), fails, tick_label=blocks)
-			plt.show()
+			if original_filename: Plots._filename = title[0] + '_' + original_filename
+			Plots._plot_out()
+		Plots._filename = original_filename
+
+	@staticmethod
+	def plot_fails_multi(var, var_range, set_output=None):
+		original_value = args[var]
+		for v in var_range:
+			print(f"Running using {var} = {v}")
+			args[var] = v
+			if set_output: Plots.set_output(*set_output(v))
+			Plots.plot_fails(run())
 
 	@staticmethod
 	def plot_game_overs(var, var_range, n_iter, plotter = None):
@@ -102,11 +135,11 @@ class Plots:
 		args[var] = original_value
 		# plotting
 		if plotter is None:
-	   		add_plot_title(f"Years of data safe ({n_iter} iteration) (Max: {args['MAXT']})")
-	   		plt.xlabel(var)
-	   		plt.ylabel("Years")
-	   		plt.plot(values, avg_timing)
-	   		plt.show()
+			add_plot_title(f"Years of data safe ({n_iter} iteration) (Max: {args['MAXT']})")
+			plt.xlabel(var)
+			plt.ylabel("Years")
+			plt.plot(values, avg_timing)
+			Plots._plot_out()
 		else: plotter(values, avg_timing)
 
 	@staticmethod
@@ -118,16 +151,19 @@ class Plots:
 		for var in var_list:
 			Plots.plot_game_overs(var, var_range, n_iter, plt.plot)
 		plt.legend(var_list)
-		plt.show()
+		Plots._plot_out()
 
-#EVENTS = run()
-#print(EVENTS[-1])
-
-#print(Plots.count_events(EVENTS))
-#Plots.plot_fails(EVENTS)
-
-Plots.plot_game_overs_comparison(['NODE_LIFETIME','SERVER_LIFETIME'], range(10,41,5), 2)
-
-# TODOs:
+# TODO:
 # - safeness? (a metric to get how your data is safe at that moment,
 #              which depends on N, K, #local_blocks at time t, #remote_blocks at time t)
+
+
+######## hardcoded plots ########
+
+Plots.plot_fails_multi('DOWNLOAD_SPEED', [1,2,4,8], lambda v: (f"dlspeed-{v}",'DOWNLOAD_SPEED'))
+
+Plots.set_output("game_over_k")
+Plots.plot_game_overs('K', [7,8,9], 3)
+
+Plots.set_output("game_over_conf_lifetime")
+Plots.plot_game_overs_comparison(['NODE_LIFETIME','SERVER_LIFETIME'], range(35, 365, 30), 2)
