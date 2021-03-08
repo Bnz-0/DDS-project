@@ -47,7 +47,7 @@ class Completion(Event):
 		# * update its completion time in state.completions
 		# * insert the termination event for the next job in queue
 		tmp = state.fifo.popleft()
-		state.completions[tmp] = state.t
+		state.completions[self.id] = state.t
 
 		# check if it was not the last element
 		if len(state.fifo):
@@ -78,12 +78,13 @@ def start(LAMBDA = 0.7, MAXT = 1000000, NSAMPLINGS = 2):
 		# if t > MAXT:
 		#   break
 
-		if last_sampling <= t:
+		if last_sampling <= t and len(samplings) < NSAMPLINGS-1:
 			samplings.append({"queue_len":len(state.fifo), "t": state.t})
 			last_sampling += sampling_interval
 
 		state.t = t
 		event.process(state)
+		del event
 	
 	return state, samplings
 

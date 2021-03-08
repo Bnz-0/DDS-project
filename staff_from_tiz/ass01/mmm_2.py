@@ -85,7 +85,7 @@ class State:
 
 
 
-def start(LAMBDA = 0.7, MAXT = 1000000, NSAMPLINGS = 100, QUEUE_NUMBER = 10, CHOICES = 2):
+def start(LAMBDA = 0.7, MAXT = 1000000, NSAMPLINGS = 100, QUEUE_NUMBER = 10, CHOICES = 1):
 	print(f"Starting:\n\tLAMBDA = {LAMBDA},\n\tMAXT = {MAXT},\n\tNSAMPLINGS = {NSAMPLINGS},\n\tQUEUE_NUMBER = {QUEUE_NUMBER},\n\tCHOICES = {CHOICES}\n")
 	state = State(LAMBDA, MAXT, QUEUE_NUMBER, CHOICES)
 	events = state.events
@@ -102,7 +102,7 @@ def start(LAMBDA = 0.7, MAXT = 1000000, NSAMPLINGS = 100, QUEUE_NUMBER = 10, CHO
 		# if t > MAXT:
 		#   break
 
-		if last_sampling <= t:
+		if last_sampling <= t and len(samplings) < NSAMPLINGS-1:
 			samplings.append({"queue_len":[len(f) for f in state.fifo], "t": state.t})
 			last_sampling += sampling_interval
 		
