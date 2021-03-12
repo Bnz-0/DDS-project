@@ -2,7 +2,9 @@
 
 from collections import Counter
 import subprocess as sub
+from math import sqrt
 import matplotlib.pyplot as plt
+
 
 class Event:
 	def __init__(self, time, name, done):
@@ -89,6 +91,18 @@ class Plots:
 		return Counter((e.name for e in events))
 
 	@staticmethod
+	def game_over_avg(n_iter, mods, names):
+		for i,(var,val) in enumerate(mods):
+			print(f"running using {var}={val} {n_iter} times")
+			original_val = args[var]
+			args[var] = val
+			runs = [run()[-1].time/365 for _ in range(n_iter)]
+			avg = sum(runs) / n_iter
+			variance = sqrt(sum((xi - avg) ** 2 for xi in runs) / len(runs))
+			print(f"{names[i]}: avg={avg}, variance=±{variance} min={min(runs)}, max={max(runs)}")
+			args[var] = original_val
+
+	@staticmethod
 	def plot_fails(events):
 		d_fails = [0] ; u_fails = [0]
 		d_blocks = [] ; u_blocks = []
@@ -115,12 +129,14 @@ class Plots:
 
 	@staticmethod
 	def plot_fails_multi(var, var_range, set_output=None):
-		original_value = args[var]
+		original_val = args[var]
 		for v in var_range:
 			print(f"Running using {var} = {v}")
 			args[var] = v
 			if set_output: Plots.set_output(*set_output(v))
 			Plots.plot_fails(run())
+
+		args[var] = original_val
 
 	@staticmethod
 	def plot_game_overs(var, var_range, n_iter, plotter = None):
@@ -153,12 +169,12 @@ class Plots:
 		plt.legend(var_list)
 		Plots._plot_out()
 
-# TODO:
-# - safeness? (a metric to get how your data is safe at that moment,
-#              which depends on N, K, #local_blocks at time t, #remote_blocks at time t)
-
 
 ######## hardcoded plots ########
+
+# single vs multi block for each server
+Plots.game_over_avg(5, [('MULTI_BLOCK_SERVER', False),('MULTI_BLOCK_SERVER', True)], ["single block", "multi block"])
+
 
 Plots.plot_fails_multi('DOWNLOAD_SPEED', [1,2,4,8], lambda v: (f"dlspeed-{v}",'DOWNLOAD_SPEED'))
 
