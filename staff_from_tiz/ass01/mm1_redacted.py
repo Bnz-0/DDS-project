@@ -86,23 +86,89 @@ def start(LAMBDA = 0.7, MAXT = 1000000, NSAMPLINGS = 2):
 		event.process(state)
 		del event
 	
+  del state.events
 	return state, samplings
 
-# state, samplings = start(LAMBDA, MAXT)
 
-# deltas = {}
-# values_sum = 0
-# values_count = 0
-# for k_arr, v_arr in state.arrivals.items():
-# 	dt = state.completions[k_arr] - v_arr
-# 	deltas[k_arr] = dt
-# 	values_sum += dt
-# 	values_count += 1
+def main(calculateVariance = True):
+	results = {}
+  NSAMPLINGS = 10001
+  MAXT = 10000000
 
-# mean = values_sum / values_count
+  results["metadata"] = {}
+  results["metadata"]["NSAMPLINGS"] = NSAMPLINGS
+  results["metadata"]["MAXT"] = MAXT
 
-# print(f"Mean time is : {mean}")
-# print(f"Mean time expected is : {1/(1-LAMBDA)}")
+  len_results = []
+  lambdas = [0.5,0.7,0.8,0.9,0.95,0.99, 1, 1.01]
+  for lam in lambdas:
+    print(f"calculating lambda: {lam}")
+    results[str(lam)] = {}
 
-# process state.arrivals and state.completions, find average time spent
-# in the system, and compare it with the theoretical value of 1 / (1 - LAMBDA)
+    state, samplings = mm1.start(lam, MAXT, NSAMPLINGS)
+    results[str(lam)]['queue_lens'] = []
+    results[str(lam)]['ts'] = []
+
+    tot_len = 0
+    for x in samplings:
+      tot_len += x['queue_len']
+      results[str(lam)]['queue_lens'].append(x['queue_len'])
+      results[str(lam)]['ts'].append(x['t'])
+
+    values_sum = 0
+    values_count = 0
+    for k_arr, v_arr in state.arrivals.items(): 
+      values_sum += state.completions[k_arr] - v_arr
+      values_count += 1
+
+    results[str(lam)]['expected_len'] = lam/(1-lam) if lam != 1 else 'inf'
+    results[str(lam)]['expected_time'] = 1/(1-lam) if lam != 1 else 'inf'
+
+    if calculateVariance:
+      print("calculating variance")
+      meanLengths = [tot_len/len(samplings)]
+      meanTimes   = [values_sum / values_count]
+
+      nvariance = 10
+      for z in range(nvariance):
+        print(f"{z} execution over {nvariance}")
+        state, samplings = mm1.start(lam, MAXT, NSAMPLINGS)
+        tot_len = 0
+        for x in samplings:
+          tot_len += x['queue_len']
+
+        values_sum = 0
+        values_count = 0
+        for k_arr, v_arr in state.arrivals.items():
+          values_sum += state.completions[k_arr] - v_arr
+          values_count += 1
+
+        meanLengths.append(tot_len/len(samplings))
+        meanTimes.append(values_sum / values_count)
+      
+      meanmeanLengths = sum(meanLengths)/len(meanLengths)
+      meanmeanTimes = sum(meanTimes)/len(meanTimes)
+
+      variance_len  = sqrt(sum((xi - meanmeanLengths) ** 2 for xi in meanLengths) / len(meanLengths))
+      variance_time = sqrt(sum((xi - meanmeanTimes  ) ** 2 for xi in meanTimes) / len(meanTimes))
+
+      results[str(lam)]['variance_len'] = variance_len
+      results[str(lam)]['mean_len'] = meanmeanLengths
+
+      results[str(lam)]['variance_time'] = variance_time
+      results[str(lam)]['mean_time'] = meanmeanTimes
+
+    else:
+      results[str(lam)]['mean_len'] = tot_len/len(samplings)
+      results[str(lam)]['mean_time'] = values_sum / values_count
+
+    
+  with open('results/mm1_lengths.hjson','w') as f:
+      s = re.sub(r'([,\[])\s+', r'\1 ', json.dumps(results, indent=2))
+      s = re.sub(r'(\s+)],\s+', r'],\1', s)
+      s = re.sub(r'(\s+)},\s+', r'\1},\n\1', s)
+      s = re.sub(r'(\s+)"(.*),\s"', r'\1"\2\1"', s)
+      f.write(s)
+
+if __name__ == '__main__':
+  main()

@@ -108,10 +108,12 @@ def start(LAMBDA = 0.7, MAXT = 1000000, NSAMPLINGS = 100, QUEUE_NUMBER = 10, CHO
 		
 		state.t = t
 		event.process(state)
+		del event
 	
 	end = time.time()
 	print(end - start)
 	
+	del state.events
 	return state, samplings
 
 # state = start(LAMBDA, MAXT)

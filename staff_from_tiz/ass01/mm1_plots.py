@@ -44,9 +44,9 @@ def plotta():
     xlim((0, NSAMPLINGS//levelOfFiltering))
 
     for lam in ltpt:
+      label = str(lam)
       if label not in results.keys():
         break
-      label = str(lam)
       v = results[label]
       datas = v["queue_lens"]
 
@@ -60,6 +60,9 @@ def plotta():
 
       to_plot[label] = datas
     else:
+      xlabel('n-th of sampling')
+      ylabel('Queue length')
+      title('Queue length during the simulation')
       legend(loc="upper left")
       show()
 
@@ -80,15 +83,25 @@ def plotta():
     y_time.append(v["mean_time"])
     y_time_expected.append(v["expected_time"])
   
-  plot(x,y_len, 'b-')
-  plot(x,y_len_expected, 'b--')
-  plot(x,y_time, 'g-')
-  plot(x,y_time_expected, 'g--')
+  plot(x,y_len, 'b-', label='Simulation results')
+  plot(x,y_len_expected, 'b--', label='Expected')
 
   print(y_len, y_len_expected)
-  print(y_time, y_time_expected)
+  print(y_time, y_time_expected, )
 
+  legend(loc="upper left")
+  xlabel('Arrival Rate')
+  ylabel('Average Length')
   show()
+
+  clearPlot((0,100))
+  plot(x,y_time, 'g-', label='Simulation results')
+  plot(x,y_time_expected, 'g--', label='Expected')
+  legend(loc="upper left")
+  xlabel('Arrival Rate')
+  ylabel('Average Time')
+  show()
+
 
 
 if __name__ == '__main__':
