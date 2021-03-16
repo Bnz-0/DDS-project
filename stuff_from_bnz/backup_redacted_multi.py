@@ -193,7 +193,7 @@ class DownloadComplete(ServerEvent):
 	def process(self, state):
 		if state.current_download is self:
 			print(" [DONE]", end='')
-			state.local_blocks[self.server] = True
+			state.local_blocks[self.block] = True
 		else: print(" [FAIL]", end='')
 		if sum(state.local_blocks) >= K:  # we have enough data to reconstruct all blocks
 			state.local_blocks = [True] * N

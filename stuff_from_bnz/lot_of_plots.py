@@ -120,8 +120,8 @@ class Plots:
 		original_filename = Plots._filename
 		for fails, blocks, title in [(d_fails, d_blocks, "Download"), (u_fails, u_blocks, "Upload")]:
 			add_plot_title(f"No of {title} fails before a success")
-			plt.xlabel("No of fails")
-			plt.ylabel("Block id")
+			plt.xlabel("Block id")
+			plt.ylabel("No of fails")
 			plt.bar(range(len(fails)), fails, tick_label=blocks)
 			if original_filename: Plots._filename = title[0] + '_' + original_filename
 			Plots._plot_out()
@@ -174,7 +174,6 @@ class Plots:
 
 # single vs multi block for each server
 Plots.game_over_avg(5, [('MULTI_BLOCK_SERVER', False),('MULTI_BLOCK_SERVER', True)], ["single block", "multi block"])
-
 
 Plots.plot_fails_multi('DOWNLOAD_SPEED', [1,2,4,8], lambda v: (f"dlspeed-{v}",'DOWNLOAD_SPEED'))
 
