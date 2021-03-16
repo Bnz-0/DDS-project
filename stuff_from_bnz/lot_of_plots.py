@@ -37,7 +37,7 @@ args = {
 	'NODE_UPTIME': 8,
 	'NODE_DOWNTIME': 16,
 	'DATA_SIZE': 100,
-	'UPLOAD_SPEED': 500,
+	'UPLOAD_SPEED': 0.5,
 	'DOWNLOAD_SPEED': 2,
 	'SERVER_LIFETIME': 365,
 	'SERVER_UPTIME': 30,
@@ -173,12 +173,14 @@ class Plots:
 ######## hardcoded plots ########
 
 # single vs multi block for each server
-Plots.game_over_avg(5, [('MULTI_BLOCK_SERVER', False),('MULTI_BLOCK_SERVER', True)], ["single block", "multi block"])
+#Plots.game_over_avg(50, [('MULTI_BLOCK_SERVER', False),('MULTI_BLOCK_SERVER', True)], ["single block", "multi block"])
 
-Plots.plot_fails_multi('DOWNLOAD_SPEED', [1,2,4,8], lambda v: (f"dlspeed-{v}",'DOWNLOAD_SPEED'))
+#Plots.plot_fails_multi('DOWNLOAD_SPEED', [1,2,4,8], lambda v: (f"dlspeed-{v}",'DOWNLOAD_SPEED'))
+#Plots.plot_fails_multi('UPLOAD_SPEED', [0.1,0.5,1,2], lambda v: (f"ulspeed-{v}",'UPLOAD_SPEED'))
 
 Plots.set_output("game_over_k")
-Plots.plot_game_overs('K', [7,8,9], 3)
+Plots.plot_game_overs('K', [7,8,9], 10)
+exit(0)
 
 Plots.set_output("game_over_conf_lifetime")
 Plots.plot_game_overs_comparison(['NODE_LIFETIME','SERVER_LIFETIME'], range(35, 365, 30), 2)

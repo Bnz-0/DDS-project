@@ -37,7 +37,7 @@ NODE_LIFETIME = (get_arg('NODE_LIFETIME') or 30) * DAY  # average time before no
 NODE_UPTIME = (get_arg('NODE_UPTIME') or 8) * HOUR  # average time spent online by the node
 NODE_DOWNTIME = (get_arg('NODE_DOWNTIME') or 16) * HOUR  # average time spent offline
 DATA_SIZE = (get_arg('DATA_SIZE') or 100) * GB  # amount of data to backup
-UPLOAD_SPEED = (get_arg('UPLOAD_SPEED') or 500) * KB  # node's speed, per second
+UPLOAD_SPEED = (get_arg('UPLOAD_SPEED', float) or 0.5) * MB  # node's speed, per second
 DOWNLOAD_SPEED = (get_arg('DOWNLOAD_SPEED') or 2) * MB  # per second
 
 # parameters as before, for the server
