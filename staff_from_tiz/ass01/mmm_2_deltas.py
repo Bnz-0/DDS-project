@@ -3,14 +3,17 @@
 from collections import deque
 from heapq import heappush, heappop
 from random import expovariate, randint, random
-import time, sys, multiprocessing
+import time, sys
+from joblib import Parallel, delayed
+import multiprocessing
+
+
+num_cores = multiprocessing.cpu_count()
 
 
 MAXT = 100_000
 LAMBDA = 0.5
 
-values_sum = 0
-values_count = 0
 
 class Event:
 	def __lt__(self, other):
@@ -50,14 +53,14 @@ class Completion(Event):
 		self.queue_index = queue_index
 	
 	def process(self, state):
-		global values_sum, values_count
 		# * remove the first job from the FIFO queue
 		# * update its completion time in state.completions
 		# * insert the termination event for the next job in queue
 		tmp = state.fifo[self.queue_index].popleft()
-		if state.t < 10_000:
-			values_sum += state.t - state.arrivals[tmp]
-			values_count += 1
+		if state.t > 10_000:
+			state.values_sum += state.t - state.arrivals[int(tmp)]
+			state.values_count += 1
+			del state.arrivals[int(tmp)]
 
 		# check if it was not the last element
 		if len(state.fifo[self.queue_index]):
@@ -66,6 +69,9 @@ class Completion(Event):
 
 class State:
 	def __init__(self, LAMBDA, MAXT, QUEUE_NUMBER = 10, CHOICES = 1):
+		self.values_sum = 0
+		self.values_count = 0
+
 		self.t = 0  # current time in the simulation
 		self.events = [(0, Arrival(0))]  # queue of events to simulate
 
@@ -92,6 +98,7 @@ class State:
 
 
 def start(LAMBDA = 0.7, MAXT = 1000000, NSAMPLINGS = 100, QUEUE_NUMBER = 10, CHOICES = 2):
+		
 	outfile = None
 	f = open(f"results/{QUEUE_NUMBER}queue/mmm_results_{CHOICES}_{LAMBDA}.md", "w")
 	# outfile = f
@@ -124,24 +131,29 @@ def start(LAMBDA = 0.7, MAXT = 1000000, NSAMPLINGS = 100, QUEUE_NUMBER = 10, CHO
 	# end = time.time()
 	# print(end - start)
 
-	print(values_sum, values_count)
-	mean = values_sum / values_count
+	print(state.values_sum, state.values_count)
+	mean = state.values_sum / state.values_count
 	print(f"Mean time is : {mean}")
 	
 	return state, samplings
 
 jobs = []
 for cho in [1, 2, 3, 5]:
-	for lam in [0.99]:
-		values_sum = 0
-		values_count = 0
-		p = multiprocessing.Process(target=start, args=(lam,100000, 10, 500, cho))
-		#state = start(lam, 100000, 10, 100, cho)
-		p.start()
-		jobs.append(p)
+	res = Parallel(n_jobs=num_cores)(delayed(start)(lam,100000, 10, 500, cho) for lam in [0.5, 0.7])
+# 	for lam in [0.5,0.7,0.8,0.9,0.95,0.99]:
+# 		values_sum = 0
+# 		values_count = 0
+# 		p = multiprocessing.Process(target=start, args=(lam,100000, 10, 500, cho))
 
-for p in jobs:
-	p.join()
+# 		#state = start(lam, 100000, 10, 100, cho)
+# 		p.start()
+# 		jobs.append(p)
+
+# for p in jobs:
+# 	p.join()
+
+
+
 # deltas = {}
 # values_sum = 0
 # values_count = 0

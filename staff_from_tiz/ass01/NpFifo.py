@@ -1,15 +1,24 @@
 import numpy as np
+import random
 
 class Fifo:
+  _initialsize = 8
+
   def __init__(self):
-    self._size = 2
-    self.fifo = np.array([0,0])
+    self._size = Fifo._initialsize
+    self.fifo = np.zeros(self._size, dtype=int)
     self.i_pop = 0
     self.i_push = 0
+  
+  def __len__(self):
+    return self.size()
+  
+  def __getitem__(self, n):
+    if self.i_pop + n >= self.i_push: return None
+    return self.fifo[self.i_pop + n]
 
   def append(self, e):
     if self.i_push == self._size :
-      print("resizing up")
       self._size *= 2
       self.fifo.resize((self._size,))
     
@@ -23,14 +32,21 @@ class Fifo:
     res = self.fifo[self.i_pop]
     self.i_pop += 1
 
-    if self.i_pop == self._size//2 and self.i_pop != 1:
-      print("resizing down")
+    if self.i_pop == self._size//2:
+      toresize = False
+      if self.i_pop != Fifo._initialsize//2:
+        toresize = True
       for i,x in enumerate(self.fifo[self._size//2:]):
         self.fifo[i] = x
-      self.fifo.resize((self._size//2,))
+
+      if toresize:
+        self.fifo.resize((self._size//2,))
+      
       self.i_pop -= self._size//2
       self.i_push -= self._size//2
-      self._size = self._size//2
+
+      if toresize:
+        self._size = self._size//2
 
     return res
 
