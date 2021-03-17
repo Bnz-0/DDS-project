@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
-from collections import Counter
 import subprocess as sub
+from copy import copy
+from collections import Counter
+from multiprocessing import Pool
 from math import sqrt
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-
 
 class Event:
 	def __init__(self, time, name, done):
@@ -30,7 +33,7 @@ class Event:
 		t, event, *result = line.split(' ')
 		return Event(float(t), event, result[0] == "[DONE]" if len(result) > 0 else None)
 
-args = {
+ARGS = {
 	'N': 10,
 	'K': 8,
 	'NODE_LIFETIME': 30,
@@ -46,7 +49,7 @@ args = {
 	'MULTI_BLOCK_SERVER': False,
 }
 
-def add_plot_title(title):
+def add_plot_title(title, args):
 	plt.suptitle(title, va='center', weight='bold')
 	plt.title(f"[N={args['N']}, K={args['K']}, {'multiple blocks' if args['MULTI_BLOCK_SERVER'] else 'single block'} per server]",
 		{'verticalalignment':'center'}
@@ -59,17 +62,23 @@ def flat(d):
 			flat_args += [k, str(v)]
 	return flat_args
 
-def run():
+def run(args = ARGS):
     p = sub.run(['./backup_redacted_multi.py'] + flat(args), check=True, capture_output=True)
     return [Event.parse(l.decode('utf-8').strip()) for l in p.stdout.split(b'\n') if len(l) > 0]
 
+def run_parallel(argsv):
+	pool = Pool(processes=len(argsv))
+	ps = [pool.apply_async(run, [args]) for args in argsv]
+	pool.close()
+	pool.join()
+	return [p.get() for p in ps]
 
 class Plots:
 	_filename = None
 	_add_info = None
 
 	@staticmethod
-	def _plot_out():
+	def _plot_out(args):
 		if Plots._add_info:
 			plt.annotate(f"{Plots._add_info} = {args[Plots._add_info]}",
 				(0,0), (-30,-20),
@@ -79,7 +88,7 @@ class Plots:
 			plt.savefig(f"img/{Plots._filename}.png", format="png")
 			plt.close()
 		else:
-			plt.show()
+			plt.show() # TODO: due to "Agg" this doesn't work
 
 	@staticmethod
 	def set_output(filename, add_info=None):
@@ -94,16 +103,16 @@ class Plots:
 	def game_over_avg(n_iter, mods, names):
 		for i,(var,val) in enumerate(mods):
 			print(f"running using {var}={val} {n_iter} times")
-			original_val = args[var]
-			args[var] = val
-			runs = [run()[-1].time/365 for _ in range(n_iter)]
+			original_val = ARGS[var]
+			ARGS[var] = val
+			runs = [r[-1].time/365 for r in run_parallel([ARGS]*n_iter)]
 			avg = sum(runs) / n_iter
 			variance = sqrt(sum((xi - avg) ** 2 for xi in runs) / len(runs))
 			print(f"{names[i]}: avg={avg}, variance=±{variance} min={min(runs)}, max={max(runs)}")
-			args[var] = original_val
+			ARGS[var] = original_val
 
 	@staticmethod
-	def plot_fails(events):
+	def plot_fails(events, args):
 		d_fails = [0] ; u_fails = [0]
 		d_blocks = [] ; u_blocks = []
 		for e in (e for e in events if "Complete" in e.name):
@@ -119,68 +128,65 @@ class Plots:
 		# plotting
 		original_filename = Plots._filename
 		for fails, blocks, title in [(d_fails, d_blocks, "Download"), (u_fails, u_blocks, "Upload")]:
-			add_plot_title(f"No of {title} fails before a success")
+			add_plot_title(f"No of {title} fails before a success", args)
 			plt.xlabel("Block id")
 			plt.ylabel("No of fails")
 			plt.bar(range(len(fails)), fails, tick_label=blocks)
 			if original_filename: Plots._filename = title[0] + '_' + original_filename
-			Plots._plot_out()
+			Plots._plot_out(args)
 		Plots._filename = original_filename
 
 	@staticmethod
 	def plot_fails_multi(var, var_range, set_output=None):
-		original_val = args[var]
+		argsv = []
 		for v in var_range:
-			print(f"Running using {var} = {v}")
-			args[var] = v
-			if set_output: Plots.set_output(*set_output(v))
-			Plots.plot_fails(run())
-
-		args[var] = original_val
+			argsv.append(copy(ARGS))
+			argsv[-1][var] = v
+		for i,r in enumerate(run_parallel(argsv)):
+			if set_output: Plots.set_output(*set_output(var_range[i]))
+			Plots.plot_fails(r, argsv[i])
 
 	@staticmethod
 	def plot_game_overs(var, var_range, n_iter, plotter = None):
-		original_value = args[var]
-		values = [] ; avg_timing = []
+		original_val = ARGS[var]
+		values = var_range[:]
+		avg_timing = []
 		for v in var_range:
-			print(f"Running using {var} = {v} for {n_iter} times")
-			args[var] = v
-			values.append(v)
-			avg_timing.append(sum(run()[-1].time for _ in range(n_iter)) / n_iter / 365)
-
-		args[var] = original_value
+			ARGS[var] = v
+			avg_timing.append(sum(r[-1].time for r in run_parallel([ARGS]*n_iter)) / n_iter / 365)
 		# plotting
 		if plotter is None:
-			add_plot_title(f"Years of data safe ({n_iter} iteration) (Max: {args['MAXT']})")
+			add_plot_title(f"Years of data safe ({n_iter} iteration) (Max: {ARGS['MAXT']})", ARGS)
 			plt.xlabel(var)
 			plt.ylabel("Years")
 			plt.plot(values, avg_timing)
-			Plots._plot_out()
-		else: plotter(values, avg_timing)
+			Plots._plot_out(ARGS)
+		else:
+			plotter(values, avg_timing)
+		ARGS[var] = original_val
 
 	@staticmethod
 	def plot_game_overs_comparison(var_list, var_range, n_iter):
 		# not super usable since to be meaningful the var_range must be the same
 		# and many vars have a different value meaning
-		add_plot_title(f"Years of data safe ({n_iter} iteration) (Max: {args['MAXT']})")
+		add_plot_title(f"Years of data safe ({n_iter} iteration) (Max: {ARGS['MAXT']})", ARGS)
 		plt.ylabel("Years")
 		for var in var_list:
 			Plots.plot_game_overs(var, var_range, n_iter, plt.plot)
 		plt.legend(var_list)
-		Plots._plot_out()
+		Plots._plot_out(ARGS)
 
 
 ######## hardcoded plots ########
 
 # single vs multi block for each server
-#Plots.game_over_avg(50, [('MULTI_BLOCK_SERVER', False),('MULTI_BLOCK_SERVER', True)], ["single block", "multi block"])
+Plots.game_over_avg(2, [('MULTI_BLOCK_SERVER', False),('MULTI_BLOCK_SERVER', True)], ["single block", "multi block"])
 
-#Plots.plot_fails_multi('DOWNLOAD_SPEED', [1,2,4,8], lambda v: (f"dlspeed-{v}",'DOWNLOAD_SPEED'))
-#Plots.plot_fails_multi('UPLOAD_SPEED', [0.1,0.5,1,2], lambda v: (f"ulspeed-{v}",'UPLOAD_SPEED'))
+Plots.plot_fails_multi('DOWNLOAD_SPEED', [1,2,4,8], lambda v: (f"dlspeed-{v}",'DOWNLOAD_SPEED'))
+Plots.plot_fails_multi('UPLOAD_SPEED', [0.1,0.5,1,2], lambda v: (f"ulspeed-{v}",'UPLOAD_SPEED'))
 
 Plots.set_output("game_over_k")
 Plots.plot_game_overs('K', [7,8,9], 10)
-exit(0)
 
 Plots.set_output("game_over_conf_lifetime")
 Plots.plot_game_overs_comparison(['NODE_LIFETIME','SERVER_LIFETIME'], range(35, 365, 30), 2)
