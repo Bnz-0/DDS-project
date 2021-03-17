@@ -9,6 +9,10 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
+class Pointer:
+	def __init__(self, val):
+		self.val = val
+
 class Event:
 	def __init__(self, time, name, done):
 		self.time = time
@@ -24,6 +28,15 @@ class Event:
 		if '(' not in self.name:
 			return None
 		return self.name[self.name.find(',')+1 : self.name.find(')')]
+
+	def is_download(self):
+		return "DownloadComplete" in self.name
+
+	def is_upload(self):
+		return "UploadComplete" in self.name
+
+	def is_game_over(self):
+		return "GameOver" in self.name or "DataSafe" in self.name
 
 	def __str__(self):
 		return f"{self.time:.2f} {self.name} {self.done}"
@@ -115,16 +128,20 @@ class Plots:
 	def plot_fails(events, args):
 		d_fails = [0] ; u_fails = [0]
 		d_blocks = [] ; u_blocks = []
-		for e in (e for e in events if "Complete" in e.name):
-			fails, blocks = (d_fails, d_blocks) if "Download" in e.name else (u_fails, u_blocks)
+		curr_d = Pointer(None) ; curr_u = Pointer(None)
+		for e in (e for e in events if e.is_upload() or e.is_download() or e.is_game_over()):
+			if e.is_game_over():
+				d_blocks.append(curr_d.val)
+				u_blocks.append(curr_u.val)
+				break
+			fails, blocks, curr = (d_fails, d_blocks, curr_d) if e.is_download() else (u_fails, u_blocks, curr_u)
+			curr.val = e.block_id()
 			if e.done:
+				blocks.append(curr.val)
 				fails.append(0)
-				blocks.append(e.block_id())
 			else:
 				fails[-1] += 1
 
-		d_fails.pop() # the last is always 0
-		u_fails.pop()
 		# plotting
 		original_filename = Plots._filename
 		for fails, blocks, title in [(d_fails, d_blocks, "Download"), (u_fails, u_blocks, "Upload")]:
@@ -180,13 +197,13 @@ class Plots:
 ######## hardcoded plots ########
 
 # single vs multi block for each server
-Plots.game_over_avg(2, [('MULTI_BLOCK_SERVER', False),('MULTI_BLOCK_SERVER', True)], ["single block", "multi block"])
+#Plots.game_over_avg(2, [('MULTI_BLOCK_SERVER', False),('MULTI_BLOCK_SERVER', True)], ["single block", "multi block"])
 
 Plots.plot_fails_multi('DOWNLOAD_SPEED', [1,2,4,8], lambda v: (f"dlspeed-{v}",'DOWNLOAD_SPEED'))
 Plots.plot_fails_multi('UPLOAD_SPEED', [0.1,0.5,1,2], lambda v: (f"ulspeed-{v}",'UPLOAD_SPEED'))
 
-Plots.set_output("game_over_k")
-Plots.plot_game_overs('K', [7,8,9], 10)
+#Plots.set_output("game_over_k")
+#Plots.plot_game_overs('K', [7,8,9], 10)
 
-Plots.set_output("game_over_conf_lifetime")
-Plots.plot_game_overs_comparison(['NODE_LIFETIME','SERVER_LIFETIME'], range(35, 365, 30), 2)
+#Plots.set_output("game_over_conf_lifetime")
+#Plots.plot_game_overs_comparison(['NODE_LIFETIME','SERVER_LIFETIME'], range(35, 365, 30), 2)
