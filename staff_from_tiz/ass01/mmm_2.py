@@ -116,6 +116,12 @@ def start(LAMBDA = 0.7, MAXT = 1000000, NSAMPLINGS = 100, QUEUE_NUMBER = 10, CHO
 	del state.events
 	return state, samplings
 
+def main():
+  start()
+
+if __name__ == '__main__':
+  main()
+
 # state = start(LAMBDA, MAXT)
 
 # deltas = {}
