@@ -164,12 +164,13 @@ class Plots:
 			Plots.plot_fails(r, argsv[i])
 
 	@staticmethod
-	def plot_game_overs(var, var_range, n_iter, plotter = None):
+	def plot_game_overs(var, var_range, n_iter, plotter = None, args_mod = None):
 		original_val = ARGS[var]
 		values = var_range[:]
 		avg_timing = []
 		for v in var_range:
 			ARGS[var] = v
+			if args_mod: args_mod(ARGS)
 			avg_timing.append(sum(r[-1].time for r in run_parallel([ARGS]*n_iter)) / n_iter / 365)
 		# plotting
 		if plotter is None:
@@ -195,15 +196,53 @@ class Plots:
 
 
 ######## hardcoded plots ########
+def set_argsk_scalar(x):
+	def args_mod(args):
+		args['K'] = args['N'] - x
+		if args['K'] <= 0: args['K'] = 1
+	return args_mod
 
-# single vs multi block for each server
-#Plots.game_over_avg(2, [('MULTI_BLOCK_SERVER', False),('MULTI_BLOCK_SERVER', True)], ["single block", "multi block"])
+def set_argsk_perc(perc):
+	def args_mod(args):
+		args['K'] = round(args['N']*perc) or 1
+	return args_mod
 
-Plots.plot_fails_multi('DOWNLOAD_SPEED', [1,2,4,8], lambda v: (f"dlspeed-{v}",'DOWNLOAD_SPEED'))
-Plots.plot_fails_multi('UPLOAD_SPEED', [0.1,0.5,1,2], lambda v: (f"ulspeed-{v}",'UPLOAD_SPEED'))
+def set_lifetime(prefix, perc_uptime, perc_downtime):
+	def args_mod(args):
+		lifetime = args[f"{prefix}_LIFETIME"]
+		args[f"{prefix}_UPTIME"] = round(lifetime * perc_uptime)
+		args[f"{prefix}_DOWNTIME"] = round(lifetime * perc_downtime)
+	return args_mod
 
-#Plots.set_output("game_over_k")
-#Plots.plot_game_overs('K', [7,8,9], 10)
+# Plots.set_output("single_block_N_with_K-0.8")
+# Plots.plot_game_overs('N', range(1,16), 10, None, set_argsk_perc(0.8))
+#
+# Plots.set_output("single_block_N_with_K-2")
+# Plots.plot_game_overs('N', range(1,16), 10, None, set_argsk_scalar(2))
 
-#Plots.set_output("game_over_conf_lifetime")
-#Plots.plot_game_overs_comparison(['NODE_LIFETIME','SERVER_LIFETIME'], range(35, 365, 30), 2)
+# Plots.set_output("single_block_DATA_SIZE")
+# Plots.plot_game_overs('DATA_SIZE', range(20,300,20), 10)
+
+# Plots.plot_game_overs_comparison(['NODE_LIFETIME','SERVER_LIFETIME'], range(35, 365, 30), 10)
+
+# Plots.set_output("single_block_NODE_LIFETIME")
+# Plots.plot_game_overs('NODE_LIFETIME', range(10,100,10), 10, None, set_lifetime('NODE', 0.25, 0.5))
+
+# Plots.set_output("single_block_SERVER_LIFETIME")
+# Plots.plot_game_overs('SERVER_LIFETIME', range(200,400,20), 10, None, set_lifetime('SERVER', 0.8, 0.005))
+
+# Plots.plot_fails_multi('DOWNLOAD_SPEED', [1,2,4,8], lambda v: (f"dlspeed-{v}",'DOWNLOAD_SPEED'))
+# Plots.plot_fails_multi('UPLOAD_SPEED', [0.1,0.5,1,2], lambda v: (f"ulspeed-{v}",'UPLOAD_SPEED'))
+
+# Plots.game_over_avg(10, [('MULTI_BLOCK_SERVER', False),('MULTI_BLOCK_SERVER', True)], ["single block", "multi block"])
+
+# ================
+
+ARGS['MULTI_BLOCK_SERVER'] = True
+
+# Plots.set_output("multi_block_N_with_K-0.8")
+# Plots.plot_game_overs('N', range(1,16), 10, None, set_argsk_perc(0.8))
+#
+# Plots.set_output("multi_block_N_with_K-2")
+# Plots.plot_game_overs('N', range(1,16), 10, None, set_argsk_scalar(2))
+
