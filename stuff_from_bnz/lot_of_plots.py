@@ -99,9 +99,9 @@ class Plots:
 			)
 		if Plots._filename:
 			plt.savefig(f"img/{Plots._filename}.png", format="png")
-			plt.close()
 		else:
-			plt.show() # TODO: due to "Agg" this doesn't work
+			plt.savefig("img/plot.png", format="png")
+		plt.close()
 
 	@staticmethod
 	def set_output(filename, add_info=None):
