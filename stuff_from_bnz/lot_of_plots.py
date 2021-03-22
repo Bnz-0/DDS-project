@@ -125,6 +125,22 @@ class Plots:
 			ARGS[var] = original_val
 
 	@staticmethod
+	def game_over_dist(n_iter, args, t_range):
+		runs = [r[-1].time/365 for r in run_parallel([args]*n_iter)]
+		x = [0] * (int(args['MAXT']//t_range))
+		for t in runs:
+			i = int(t//t_range)
+			x[i-1 if i==len(x) else i] += 1
+
+		# plotting
+		add_plot_title(f"Game over distribution ({n_iter} iteration)", args)
+		plt.xlabel("years")
+		plt.ylabel("#game-over")
+		plt.bar(range(len(x)), x, tick_label=[f"{t*t_range}-{t*t_range + t_range}" for t in range(len(x))])
+		Plots._plot_out(args)
+
+
+	@staticmethod
 	def plot_fails(events, args):
 		d_fails = [0] ; u_fails = [0]
 		d_blocks = [] ; u_blocks = []
@@ -214,6 +230,12 @@ def set_lifetime(prefix, perc_uptime, perc_downtime):
 		args[f"{prefix}_DOWNTIME"] = round(lifetime * perc_downtime)
 	return args_mod
 
+
+#Plots.game_over_avg(100, [('MULTI_BLOCK_SERVER', False),('MULTI_BLOCK_SERVER', True)], ["single block", "multi block"])
+
+Plots.set_output("single_block_dist")
+Plots.game_over_dist(100, ARGS, 10)
+
 # Plots.set_output("single_block_N_with_K-0.8")
 # Plots.plot_game_overs('N', range(1,16), 10, None, set_argsk_perc(0.8))
 #
@@ -234,7 +256,6 @@ def set_lifetime(prefix, perc_uptime, perc_downtime):
 # Plots.plot_fails_multi('DOWNLOAD_SPEED', [1,2,4,8], lambda v: (f"dlspeed-{v}",'DOWNLOAD_SPEED'))
 # Plots.plot_fails_multi('UPLOAD_SPEED', [0.1,0.5,1,2], lambda v: (f"ulspeed-{v}",'UPLOAD_SPEED'))
 
-# Plots.game_over_avg(10, [('MULTI_BLOCK_SERVER', False),('MULTI_BLOCK_SERVER', True)], ["single block", "multi block"])
 
 # ================
 
