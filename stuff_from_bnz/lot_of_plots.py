@@ -161,9 +161,9 @@ class Plots:
 		# plotting
 		original_filename = Plots._filename
 		for fails, blocks, title in [(d_fails, d_blocks, "Download"), (u_fails, u_blocks, "Upload")]:
-			add_plot_title(f"No of {title} fails before a success", args)
+			add_plot_title(f"No. of {title} fails before a success", args)
 			plt.xlabel("Block id")
-			plt.ylabel("No of fails")
+			plt.ylabel("No. of fails")
 			plt.bar(range(len(fails)), fails, tick_label=blocks)
 			if original_filename: Plots._filename = title[0] + '_' + original_filename
 			Plots._plot_out(args)
@@ -231,10 +231,10 @@ def set_lifetime(prefix, perc_uptime, perc_downtime):
 	return args_mod
 
 
-#Plots.game_over_avg(100, [('MULTI_BLOCK_SERVER', False),('MULTI_BLOCK_SERVER', True)], ["single block", "multi block"])
+# Plots.game_over_avg(100, [('MULTI_BLOCK_SERVER', False),('MULTI_BLOCK_SERVER', True)], ["single block", "multi block"])
 
-Plots.set_output("single_block_dist")
-Plots.game_over_dist(100, ARGS, 10)
+# Plots.set_output("single_block_dist")
+# Plots.game_over_dist(100, ARGS, 10)
 
 # Plots.set_output("single_block_N_with_K-0.8")
 # Plots.plot_game_overs('N', range(1,16), 10, None, set_argsk_perc(0.8))
@@ -256,7 +256,6 @@ Plots.game_over_dist(100, ARGS, 10)
 # Plots.plot_fails_multi('DOWNLOAD_SPEED', [1,2,4,8], lambda v: (f"dlspeed-{v}",'DOWNLOAD_SPEED'))
 # Plots.plot_fails_multi('UPLOAD_SPEED', [0.1,0.5,1,2], lambda v: (f"ulspeed-{v}",'UPLOAD_SPEED'))
 
-
 # ================
 
 ARGS['MULTI_BLOCK_SERVER'] = True
@@ -266,4 +265,3 @@ ARGS['MULTI_BLOCK_SERVER'] = True
 #
 # Plots.set_output("multi_block_N_with_K-2")
 # Plots.plot_game_overs('N', range(1,16), 10, None, set_argsk_scalar(2))
-
