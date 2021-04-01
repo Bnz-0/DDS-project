@@ -1,3 +1,4 @@
 __pycache__
 .venv
 node_modules
+staff_from_tiz/ass01/results/*

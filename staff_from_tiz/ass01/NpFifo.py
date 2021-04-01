@@ -1,5 +1,4 @@
 import numpy as np
-import random
 
 class Fifo:
   _initialsize = 8
@@ -36,8 +35,8 @@ class Fifo:
       toresize = False
       if self.i_pop != Fifo._initialsize//2:
         toresize = True
-      for i,x in enumerate(self.fifo[self._size//2:]):
-        self.fifo[i] = x
+      
+      self.fifo[:self._size//2] = self.fifo[self._size//2:]
 
       if toresize:
         self.fifo.resize((self._size//2,))

@@ -1,5 +1,4 @@
 from matplotlib.pyplot import *
-import ast
 import hjson
 
 colors = {

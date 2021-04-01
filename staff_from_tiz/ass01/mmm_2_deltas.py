@@ -60,7 +60,7 @@ class Completion(Event):
 		if state.t > 10_000:
 			state.values_sum += state.t - state.arrivals[int(tmp)]
 			state.values_count += 1
-			del state.arrivals[int(tmp)]
+			del state.arrivals[int(tmp) ]
 
 		# check if it was not the last element
 		if len(state.fifo[self.queue_index]):
@@ -138,8 +138,8 @@ def start(LAMBDA = 0.7, MAXT = 1000000, NSAMPLINGS = 100, QUEUE_NUMBER = 10, CHO
 	return state, samplings
 
 jobs = []
-for cho in [1, 2, 3, 5]:
-	res = Parallel(n_jobs=num_cores)(delayed(start)(lam,100000, 10, 500, cho) for lam in [0.5, 0.7])
+for cho in [100]:
+	res = Parallel(n_jobs=num_cores)(delayed(start)(lam,100000, 10, 100, cho) for lam in [0.7])
 # 	for lam in [0.5,0.7,0.8,0.9,0.95,0.99]:
 # 		values_sum = 0
 # 		values_count = 0
