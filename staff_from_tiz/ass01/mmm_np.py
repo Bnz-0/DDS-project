@@ -16,6 +16,11 @@ LAMBDA = 0.7
 s = set()
 s_arr = set()
 
+DEBUGMODE = False
+
+def print_debug(s, end='\n'):
+  if DEBUGMODE:
+    print(s,end=end)
 
 def processArrival(state, infos):
   # * save job arrival time in state.arrivals
@@ -48,7 +53,7 @@ def processCompletion(state, infos):
   tmp = state.fifo[queue_index].popleft()
   # state.completions[tmp] = state.t
   
-  if state.t > 10_000:
+  if state.t > 20_000:
     state.values_sum += state.t - state.arrivals[tmp]
     state.values_count += 1
     del state.arrivals[tmp]
@@ -100,13 +105,19 @@ class State:
     self.LEN_REAL_DATAS = 0
 
     if REAL_DATAS is not None:
-      csv_reader = csv.DictReader(REAL_DATAS, delimiter=',')
+      csv_reader = csv.DictReader(REAL_DATAS, delimiter=';')
+      tot_duration = 0
+      tot_arr = 0
       for x in csv_reader:
-        if x['job_status'] == 'JOBEND':
-          start_time = int(datetime.timestamp(datetime.strptime(x['start_time'],'%d/%m/%Y %H:%M')))
-          end_time   = int(datetime.timestamp(datetime.strptime(x['end_time'],'%d/%m/%Y %H:%M')))
-          self.REAL_DATAS.append((start_time, end_time, x['job_status']))
+        start_time = int(datetime.timestamp(datetime.strptime(x['start_time'],'%d/%m/%Y %H:%M')))
+        end_time   = int(datetime.timestamp(datetime.strptime(x['end_time'],'%d/%m/%Y %H:%M')))
+        if len(self.REAL_DATAS) > 0:
+          tot_duration += end_time - start_time
+          tot_arr += start_time - self.REAL_DATAS[-1][0]
+        self.REAL_DATAS.append((start_time, end_time))
 
+      self.LAMBDA = (tot_arr/len(self.REAL_DATAS)) * (1/len(self.REAL_DATAS))
+      print(F"FOUND LAMBDA OF {self.LAMBDA}")
       self.LEN_REAL_DATAS = len(self.REAL_DATAS)
       self.MAXT = self.REAL_DATAS[-1][1] - self.REAL_DATAS[0][0]
       self.STARTT = self.REAL_DATAS[0][0]
@@ -114,6 +125,7 @@ class State:
   def getArrivalTime(self,id):
     if self.USE_REAL_DATAS:
       if id < self.LEN_REAL_DATAS:
+        if id > 15000: print_debug(f"arr: {id}/{len(self.REAL_DATAS)}")
         return self.REAL_DATAS[id][0] - self.STARTT
       return None
     else:
@@ -122,6 +134,7 @@ class State:
   def getCompletionTime(self,id):
     if self.USE_REAL_DATAS:
       if id < self.LEN_REAL_DATAS:
+        if id > 15000: print_debug(f"completed: {id}/{len(self.REAL_DATAS)}")
         # print(f"get end {id}: {self.getArrivalTime(id)} -> {self.t + (self.REAL_DATAS[id][1] - self.REAL_DATAS[id][0])} - {self.REAL_DATAS[id][2]}")
         # print(f"get end: {self.t + self.REAL_DATAS[id][1] - self.REAL_DATAS[id][0]}")
         return self.t + (self.REAL_DATAS[id][1] - self.REAL_DATAS[id][0])
@@ -150,8 +163,9 @@ class State:
 
 
 
-def start(LAMBDA = 0.7, MAXT = 1000000, NSAMPLINGS = 1001, QUEUE_NUMBER = 100, CHOICES = 1, LOCALITY = False, REAL_DATAS = None):
-  
+def start(LAMBDA = 0.7, MAXT = 1000000, NSAMPLINGS = 1001, QUEUE_NUMBER = 100, CHOICES = 1, LOCALITY = False, REAL_DATAS = None, DEBUG = False):
+  global DEBUGMODE
+  DEBUGMODE = DEBUG
   csv_file = None
   if REAL_DATAS is not None and os.path.exists(REAL_DATAS):
     csv_file = open(REAL_DATAS, mode='r')

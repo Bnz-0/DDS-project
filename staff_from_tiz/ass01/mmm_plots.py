@@ -11,6 +11,7 @@ colors = {
 
 colors_lam = {
   "0.07": "b",
+  "14.11": "b",
   "0.5": "b",
   "0.7": "tab:cyan",
   "0.8": "tab:orange",
@@ -19,21 +20,14 @@ colors_lam = {
   "0.99": "r",
 }
 
-def plotta():
-  results = {}
-  with open("results/mmm_lengths.hjson", 'r') as f:
-    results = hjson.load(f)
-  
-  NSAMPLINGS = results["metadata"]["NSAMPLINGS"]
-  NSAMPLINGS -= 1
-
+def elaborate_results(results):
   x = []
   dict_nchoice_mean_time = {}
   dict_nchoice_mean_len = {}
   dict_nchoice_lengths = {}
 
   for lam, res in results.items():
-    if lam != "0.07": continue
+    if lam != "14.11": continue
     if lam == "metadata":  continue
     x.append(float(lam))
     print(lam)
@@ -81,29 +75,11 @@ def plotta():
 
         dict_nchoice_lengths[cho][lam] = [x_l,y_l]
 
-  for cho, y in dict_nchoice_mean_time.items():
-    print(cho, x, y)
-    plot(x,y, colors[cho], label=f'{cho} choice')
-
-  legend(loc="upper left")
-  xlabel('Arrival Rate')
-  ylabel('Average Time')
-  show()
-
-  clf()
-
-  for cho, y in dict_nchoice_mean_len.items():
-    print(cho, x, y)
-    plot(x,y, colors[cho], label=f'{cho} choice')
-
-  legend(loc="upper left")
-  xlabel('Arrival Rate')
-  ylabel('Average Queue Length')
-  show()
+  return x, dict_nchoice_mean_time, dict_nchoice_mean_len, dict_nchoice_lengths
 
 
-  clf()
-  fig, axs = subplots(2, 2)
+
+def dodistrplot(x, dict_nchoice_mean_time, dict_nchoice_mean_len, dict_nchoice_lengths, fig, axs):
   for (cho, lams),(xplot,yplot) in zip(dict_nchoice_lengths.items(), [(0,0),(0,1),(1,0),(1,1)]):
     print(f'Putting {cho} in position ({xplot},{yplot})')
     axs[xplot, yplot].set_title(f"{cho} choices")
@@ -118,11 +94,63 @@ def plotta():
       if cho == "1":
         axs[xplot, yplot].plot(xy[0][1:15],[LAMBDA**i for i in xy[0][1:15]], f'{colors_lam[lam]}--', label=f'expected')
       else:
+        continue
         choices = int(cho)
         axs[xplot, yplot].plot(xy[0][1:15],[LAMBDA**(((choices**i)-1)/(choices-1)) for i in xy[0][1:15]], f'{colors_lam[lam]}--', label=f'expected')
 
-    
     axs[xplot, yplot].legend(loc="upper right")
+
+
+
+def plotta(compare_real = False, only_real = True):
+  results = {}
+  with open("results/mmm_lengths.hjson", 'r') as f:
+    results = hjson.load(f)
+  
+  if not only_real:
+    x, dict_nchoice_mean_time, dict_nchoice_mean_len, dict_nchoice_lengths = elaborate_results(results)
+  else:
+    real_results = {}
+    with open("results/mmm_lengths.real.hjson", 'r') as f:
+      real_results = hjson.load(f)
+    x, dict_nchoice_mean_time, dict_nchoice_mean_len, dict_nchoice_lengths = elaborate_results(real_results)
+    
+
+  if compare_real and not only_real:
+    real_results = {}
+    with open("results/mmm_lengths.real.hjson", 'r') as f:
+      real_results = hjson.load(f)
+    
+    real_x, real_dict_nchoice_mean_time, real_dict_nchoice_mean_len, real_dict_nchoice_lengths = elaborate_results(real_results)
+
+
+  if not compare_real:
+    for cho, y in dict_nchoice_mean_time.items():
+      print(cho, x, y)
+      plot(x,y, colors[cho], label=f'{cho} choice')
+
+    legend(loc="upper left")
+    xlabel('Arrival Rate')
+    ylabel('Average Time')
+    show()
+    clf()
+
+  if not compare_real:
+    for cho, y in dict_nchoice_mean_len.items():
+      print(cho, x, y)
+      plot(x,y, colors[cho], label=f'{cho} choice')
+
+    legend(loc="upper left")
+    xlabel('Arrival Rate')
+    ylabel('Average Queue Length')
+    show()
+    clf()
+  
+
+  fig, axs = subplots(2, 2)
+  dodistrplot(x, dict_nchoice_mean_time, dict_nchoice_mean_len, dict_nchoice_lengths, fig, axs)
+  # if compare_real:
+  #   dodistrplot(real_x, real_dict_nchoice_mean_time, real_dict_nchoice_mean_len, real_dict_nchoice_lengths, fig, axs)
     
   for ax in axs.flat:
     ax.label_outer()
