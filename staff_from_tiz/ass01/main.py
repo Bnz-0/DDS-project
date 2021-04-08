@@ -8,8 +8,9 @@ num_cores = multiprocessing.cpu_count()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-f', '--force', default=False, dest='force', help='Force re-execution of results',action='store_true')
-parser.add_argument('-r', '--real-datas', default=False, type=str, dest='realdata', help='Path to real data')
+parser.add_argument('-r', '--real-datas', default='', type=str, dest='realdata', help='Path to real data')
 parser.add_argument('-l', default=False, dest='locality', help='Useful only with -mmn',action='store_true')
+parser.add_argument('-D', default=False, dest='debug', help='Debug mode',action='store_true')
 parser.add_argument('mode', default=False, help='Execution mode: mm1, mmn or mmm')
 args = parser.parse_args()
 
@@ -54,12 +55,12 @@ def calc(results, lam):
   if slam not in results:
     results[slam] = {}
   
-  for q_num in [1,2,3,5,100]:
+  for q_num in [100]:
     sq_num = str(q_num)
     if sq_num not in results[slam]:
       results[slam][sq_num] = {}
 
-    for cho in [1,2,3,5,10]:
+    for cho in [1,2,5,10]:
       if q_num == 2 and cho != 2: continue
       if q_num == 3 and cho != 3: continue
       if q_num == 5 and cho != 5: continue
@@ -73,7 +74,7 @@ def calc(results, lam):
       if not args.force and os.path.exists(getMMNTmpFile(MAXT, NSAMPLINGS,slam,sq_num,scho)) and os.path.getsize(getMMNTmpFile(MAXT, NSAMPLINGS,slam,sq_num,scho)):
         continue
       
-      state = mmm.start(LAMBDA = lam, MAXT = MAXT, NSAMPLINGS = NSAMPLINGS, QUEUE_NUMBER = q_num, CHOICES = cho, LOCALITY=args.locality, REAL_DATAS=args.realdata)
+      state = mmm.start(LAMBDA = lam, MAXT = MAXT, NSAMPLINGS = NSAMPLINGS, QUEUE_NUMBER = q_num, CHOICES = cho, LOCALITY=args.locality, REAL_DATAS=args.realdata, DEBUG = args.debug)
       samplings = state.samplings
 
       print("state: ", state.values_sum, state.values_count)
@@ -123,7 +124,7 @@ elif args.mode == 'mmn':
   import mmm_np as mmm
 
   MAXT = 1000000
-  NSAMPLINGS = 11 if args.realdata else 1001
+  NSAMPLINGS = 51 if args.realdata else 1001
   LOCALITY = False
 
   results = {}
