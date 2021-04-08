@@ -80,11 +80,11 @@ def run(args = ARGS):
     return [Event.parse(l.decode('utf-8').strip()) for l in p.stdout.split(b'\n') if len(l) > 0]
 
 def run_parallel(argsv):
-	pool = Pool(processes=len(argsv))
-	ps = [pool.apply_async(run, [args]) for args in argsv]
-	pool.close()
-	pool.join()
-	return [p.get() for p in ps]
+       pool = Pool(processes=len(argsv))
+       ps = [pool.apply_async(run, [args]) for args in argsv]
+       pool.close()
+       pool.join()
+       return [p.get() for p in ps]
 
 class Plots:
 	_filename = None
@@ -113,16 +113,12 @@ class Plots:
 		return Counter((e.name for e in events))
 
 	@staticmethod
-	def game_over_avg(n_iter, mods, names):
-		for i,(var,val) in enumerate(mods):
-			print(f"running using {var}={val} {n_iter} times")
-			original_val = ARGS[var]
-			ARGS[var] = val
-			runs = [r[-1].time/365 for r in run_parallel([ARGS]*n_iter)]
-			avg = sum(runs) / n_iter
-			variance = sqrt(sum((xi - avg) ** 2 for xi in runs) / len(runs))
-			print(f"{names[i]}: avg={avg}, variance=±{variance} min={min(runs)}, max={max(runs)}")
-			ARGS[var] = original_val
+	def game_over_avg(n_iter):
+		print(f"running {n_iter} times")
+		runs = [r[-1].time/365 for r in run_parallel([ARGS]*n_iter)]
+		avg = sum(runs) / n_iter
+		variance = sqrt(sum((xi - avg) ** 2 for xi in runs) / len(runs))
+		print(f"avg={avg}, variance=±{variance} min={min(runs)}, max={max(runs)}")
 
 	@staticmethod
 	def game_over_dist(n_iter, args, t_range):
@@ -231,21 +227,31 @@ def set_lifetime(prefix, perc_uptime, perc_downtime):
 	return args_mod
 
 
-# Plots.game_over_avg(100, [('MULTI_BLOCK_SERVER', False),('MULTI_BLOCK_SERVER', True)], ["single block", "multi block"])
+# Plots.game_over_avg(100)
+# ARGS['MULTI_BLOCK_SERVER'] = True
+# Plots.game_over_avg(100)
+# ARGS['MULTI_BLOCK_SERVER'] = False
 
 # Plots.set_output("single_block_dist")
 # Plots.game_over_dist(100, ARGS, 10)
 
 # Plots.set_output("single_block_N_with_K-0.8")
-# Plots.plot_game_overs('N', range(1,16), 10, None, set_argsk_perc(0.8))
+# Plots.plot_game_overs('N', range(1,41), 10, None, set_argsk_perc(0.8))
 #
 # Plots.set_output("single_block_N_with_K-2")
-# Plots.plot_game_overs('N', range(1,16), 10, None, set_argsk_scalar(2))
+# Plots.plot_game_overs('N', range(1,41), 10, None, set_argsk_scalar(2))
+# ARGS['N'] = 10
+# ARGS['K'] = 8
 
 # Plots.set_output("single_block_DATA_SIZE")
 # Plots.plot_game_overs('DATA_SIZE', range(20,300,20), 10)
 
-# Plots.plot_game_overs_comparison(['NODE_LIFETIME','SERVER_LIFETIME'], range(35, 365, 30), 10)
+# Plots.set_output("single_block_lifetime")
+# Plots.plot_game_overs_comparison(['NODE_LIFETIME','SERVER_LIFETIME'], range(35, 455, 30), 10)
+
+# ARGS['NODE_LIFETIME'] = 365
+# ARGS['SERVER_LIFETIME'] = 30
+# Plots.game_over_avg(100)
 
 # Plots.set_output("single_block_NODE_LIFETIME")
 # Plots.plot_game_overs('NODE_LIFETIME', range(10,100,10), 10, None, set_lifetime('NODE', 0.25, 0.5))
@@ -256,12 +262,29 @@ def set_lifetime(prefix, perc_uptime, perc_downtime):
 # Plots.plot_fails_multi('DOWNLOAD_SPEED', [1,2,4,8], lambda v: (f"dlspeed-{v}",'DOWNLOAD_SPEED'))
 # Plots.plot_fails_multi('UPLOAD_SPEED', [0.1,0.5,1,2], lambda v: (f"ulspeed-{v}",'UPLOAD_SPEED'))
 
+
 # ================
 
 ARGS['MULTI_BLOCK_SERVER'] = True
 
+# Plots.set_output("multi_block_dist")
+# Plots.game_over_dist(100, ARGS, 10)
+
+ARGS['NODE_LIFETIME'] = 365
+ARGS['SERVER_LIFETIME'] = 30
+
+# Plots.game_over_avg(100)
+
+Plots.set_output("multi_block_DATA_SIZE")
+ARGS['MULTI_BLOCK_SERVER'] = False
+Plots.plot_game_overs('DATA_SIZE', range(20,300,20), 10, plt.plot)
+ARGS['MULTI_BLOCK_SERVER'] = True
+Plots.plot_game_overs('DATA_SIZE', range(20,300,20), 10, plt.plot)
+plt.legend(['single block', 'mutli block'])
+Plots._plot_out(ARGS)
+
+
 # Plots.set_output("multi_block_N_with_K-0.8")
-# Plots.plot_game_overs('N', range(1,16), 10, None, set_argsk_perc(0.8))
-#
-# Plots.set_output("multi_block_N_with_K-2")
-# Plots.plot_game_overs('N', range(1,16), 10, None, set_argsk_scalar(2))
+# Plots.plot_game_overs('N', range(1,41), 10, None, set_argsk_perc(0.8))
+# ARGS['N'] = 10
+# ARGS['K'] = 8
