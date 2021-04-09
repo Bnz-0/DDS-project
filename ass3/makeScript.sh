@@ -20,13 +20,9 @@ ABI=$(solc $1 --abi 2> /dev/null | tail -n 1)
 echo Abi: $ABI
 echo Binary: $BIN
 
-# ABI
-cat > $2.abi << EOF
-var ${2}Contract = eth.contract($ABI)
-EOF
 
-# BIN
-cat > $2.bin << EOF
+cat > $2.load << EOF
+var ${2}Contract = eth.contract($ABI)
 personal.unlockAccount(eth.accounts[0])
 var $2 = ${2}Contract.new({
 	from: eth.accounts[0],
