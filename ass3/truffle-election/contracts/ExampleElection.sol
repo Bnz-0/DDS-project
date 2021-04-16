@@ -5,9 +5,9 @@ import "./IElection.sol";
 import "./Election.sol";
 
 contract ExampleElection is IElection, Election {
-	string public constant name = "ExampleElection";
-	uint public constant deadline = 1618570000;
 
-	constructor() Election( deadline ) public {
+	constructor() Election( deadline ) {
+		name = "ExampleElection";
+		deadline = 1618570000;
 	}
 }
