@@ -10,9 +10,9 @@ interface IElection {
 		address indexed _from,
 		string _party
 	);
-  
-  event Approval(
-    address indexed _owner,
-    address indexed _voter
-  );
+
+	event Approval(
+		address indexed _owner,
+		address indexed _voter
+	);
 }
