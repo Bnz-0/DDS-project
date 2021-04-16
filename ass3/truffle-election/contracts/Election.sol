@@ -12,14 +12,13 @@ contract Election is IElection {
   mapping(string => uint256) public parties;
   mapping(address => mapping(address => bool)) public allowance;
 
-  constructor(string memory _name, uint _deadline) public {
+  constructor(uint _deadline) public {
     deadline = _deadline;
-    name = _name;
   }
   
   function vote(string memory _party) public returns (bool success) {
-    require(hasVoted[msg.sender] == false);
-    require(now < deadline);
+    require(hasVoted[msg.sender] == false, "The voter has already voted");
+    require(block.timestamp < deadline);
     
     hasVoted[msg.sender] = true;
     parties[_party] += 1; 
@@ -38,9 +37,9 @@ contract Election is IElection {
   }
   
   function voteFor(address _from, string memory _party) public returns (bool success) {
-  	require(allowance[_from][msg.sender] == true);
-  	require(hasVoted[_from] == false);
-	require(now < deadline);
+  	require(allowance[_from][msg.sender] == true, "Not approved by the voter");
+  	require(hasVoted[_from] == false, "The voter has already voted");
+	require(block.timestamp < deadline);
   	
   	allowance[_from][msg.sender] = false;
   	parties[_party] += 1;
