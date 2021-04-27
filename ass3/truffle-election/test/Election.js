@@ -1,6 +1,6 @@
-const Election = artifacts.require("Election.sol");
+const Election = artifacts.require("ExampleElection.sol");
 
-contract('Election', function(accounts) {
+contract('ExampleElection', function(accounts) {
 
   it('basic checks', function() {
     var inst;
@@ -8,7 +8,7 @@ contract('Election', function(accounts) {
       inst = instance;
       return inst.name();
     }).then(function(name) {
-      assert.equal(name, 'Cogoleto', 'should be named Cogoleto');
+      assert.equal(name, 'ExampleElection', 'should be named ExampleElection');
       return inst.vote.call('Pinuccio', {from: accounts[0]});
     }).then(function(success) {
       assert.equal(success, true, 'accounts[0] should vote');
@@ -22,7 +22,7 @@ contract('Election', function(accounts) {
       assert.equal(pinucciosVotes.toNumber(), 1, 'Pinuccio should have 1 vote');
     })
   })
-  
+
   it('approve checks', function() {
     var inst;
     return Election.deployed().then(function(instance) {
@@ -40,7 +40,7 @@ contract('Election', function(accounts) {
     	assert.equal(isapproved, true, 'accounts[1] is approved from accounts[0]');
     })
   })
-  
+
   it('delegated voting', function() {
   	var inst;
     return Election.deployed().then(function(instance) {

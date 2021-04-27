@@ -18,7 +18,7 @@ contract Election is IElection {
 
 	function vote(string memory _party) override public returns (bool success) {
 		require(hasVoted[msg.sender] == false, "The voter has already voted");
-		require(block.timestamp < deadline);
+		require(block.timestamp < deadline, "The deadline is over");
 
 		hasVoted[msg.sender] = true;
 		parties[_party] += 1;
@@ -39,7 +39,7 @@ contract Election is IElection {
 	function voteFor(address _from, string memory _party) override public returns (bool success) {
 		require(allowance[_from][msg.sender] == true, "Not approved by the voter");
 		require(hasVoted[_from] == false, "The voter has already voted");
-		require(block.timestamp < deadline);
+		require(block.timestamp < deadline, "The deadline is over");
 
 		allowance[_from][msg.sender] = false;
 		parties[_party] += 1;
