@@ -76,7 +76,6 @@ class Server:
 		return self.can_have(i) and self.blocks[min(N_BLOCK_SERVER-1, i)]
 
 	def store(self, i):
-		assert self.can_have(i) #TODO: remove once done
 		self.blocks[min(N_BLOCK_SERVER-1, i)] = True
 
 	def fail(self):
