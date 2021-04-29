@@ -30,7 +30,7 @@ def filterComments(s):
 
 def plotta():
   results = []
-  with open("results/mm1_lengths.hjson", 'r') as f:
+  with open("results/mmm_lengths.hjson", 'r') as f:
     results = hjson.load(f)
   
   NSAMPLINGS = results["metadata"]["NSAMPLINGS"]
@@ -46,7 +46,7 @@ def plotta():
       label = str(lam)
       if label not in results.keys():
         break
-      v = results[label]
+      v = results[label]["1"]["1"]
       datas = v["queue_lens"]
 
       y = []
@@ -76,6 +76,7 @@ def plotta():
     if str(k)=="metadata" : continue
     if float(k) >= 1: break
 
+    v = v["1"]["1"]
     x.append(k)
     y_len.append(v["mean_len"])
     y_len_expected.append(v["expected_len"])
@@ -100,8 +101,6 @@ def plotta():
   xlabel('Arrival Rate')
   ylabel('Average Time')
   show()
-
-
 
 if __name__ == '__main__':
   plotta()

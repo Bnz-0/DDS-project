@@ -7,7 +7,7 @@ from random import expovariate, randint, random
 import time, sys, csv, os.path
 import numpy as np
 from NpFifo import Fifo
-from dynarray import DynamicArray
+from dateutil import parser
 
 
 MAXT = 1000000
@@ -18,9 +18,9 @@ s_arr = set()
 
 DEBUGMODE = False
 
-def print_debug(s, end='\n'):
+def print_debug(*s, end='\n'):
   if DEBUGMODE:
-    print(s,end=end)
+    print(*s,end=end)
 
 def processArrival(state, infos):
   # * save job arrival time in state.arrivals
@@ -34,9 +34,12 @@ def processArrival(state, infos):
   newjobid = jobid + 1
   tmp_t = state.getArrivalTime(newjobid)
 
+  if tmp_t is None:
+    return False
+
   # I moved this check here so that when the time finish I will not add events anymore
   # but I will finish the ones in the queue, otherwise I would have Arrivals > Completions (nothing too bad btw)
-  if tmp_t is not None and tmp_t < state.MAXT:
+  if tmp_t < state.MAXT:
     heappush(state.events, (tmp_t, (newjobid, -1)))
   
   q = state.select_queue()
@@ -44,6 +47,7 @@ def processArrival(state, infos):
     heappush(state.events, (state.getCompletionTime(jobid), (-jobid, q)))
   
   state.fifo[q].append(jobid)
+  return True
 
 def processCompletion(state, infos):
   # * remove the first job from the FIFO queue
@@ -63,6 +67,7 @@ def processCompletion(state, infos):
     heappush(state.events, (state.getCompletionTime(state.fifo[queue_index][0]), (-state.fifo[queue_index][0],queue_index)))
 
 def processSampling(state):
+  print_debug("S:",state.t)
   newsampling = np.zeros(state.QUEUE_NUMBER, dtype=int)
   print(f"{len(state.samplings)}/{state.NSAMPLINGS}", end='           \r')
   for i, f in enumerate(state.fifo):
@@ -73,10 +78,12 @@ def process(state, infos):
   jobid, queue_index = infos
   if jobid == 0:
     processSampling(state)
+    return True
   elif jobid < 0:
     processCompletion(state, (-jobid, queue_index))
+    return True
   else:
-    processArrival(state, (jobid, -1))
+    return processArrival(state, (jobid, -1))
 
 
 class State:
@@ -101,44 +108,63 @@ class State:
     self.NSAMPLINGS = NSAMPLINGS
     self.LOCALITY = LOCALITY
     self.REAL_DATAS = []
+    self.REAL_DATAS_ENDS = {}
     self.USE_REAL_DATAS = REAL_DATAS is not None
-    self.LEN_REAL_DATAS = 0
+
+    self.CSV_READER = None
 
     if REAL_DATAS is not None:
-      csv_reader = csv.DictReader(REAL_DATAS, delimiter=';')
-      tot_duration = 0
-      tot_arr = 0
-      for x in csv_reader:
-        start_time = int(datetime.timestamp(datetime.strptime(x['start_time'],'%d/%m/%Y %H:%M')))
-        end_time   = int(datetime.timestamp(datetime.strptime(x['end_time'],'%d/%m/%Y %H:%M')))
-        if len(self.REAL_DATAS) > 0:
-          tot_duration += end_time - start_time
-          tot_arr += start_time - self.REAL_DATAS[-1][0]
-        self.REAL_DATAS.append((start_time, end_time))
+      self.CSV_READER = csv.DictReader(REAL_DATAS, delimiter=',')
+      self.LAMBDA = 1
+      self.MAXT = 1000000000
+  
+  def _readNextTimings(self):
+    end = (None, None)
+    start_time = submit_time = end_time = None
+    while True:
+      try:
+        x = self.CSV_READER.__next__()
+        if x is None: 
+          print_debug("stop reading csv_file")
+          return end
+        if x['job_status'] != 'COMPLETED': continue
+      except StopIteration:
+        print_debug("stop reading csv_file")
+        return end
+      try:
+        submit_time = int(datetime.timestamp(parser.parse(x['submit_time'])))
+        start_time  = int(datetime.timestamp(parser.parse(x['start_time'])))
+        end_time    = int(datetime.timestamp(parser.parse(x['end_time'])))
+        break
+      except:
+        continue
 
-      self.LAMBDA = (tot_arr/len(self.REAL_DATAS)) * (1/len(self.REAL_DATAS))
-      print(F"FOUND LAMBDA OF {self.LAMBDA}")
-      self.LEN_REAL_DATAS = len(self.REAL_DATAS)
-      self.MAXT = self.REAL_DATAS[-1][1] - self.REAL_DATAS[0][0]
-      self.STARTT = self.REAL_DATAS[0][0]
+    return submit_time, end_time
 
-  def getArrivalTime(self,id):
+  def getArrivalTime(self,_id):
     if self.USE_REAL_DATAS:
-      if id < self.LEN_REAL_DATAS:
-        if id > 15000: print_debug(f"arr: {id}/{len(self.REAL_DATAS)}")
-        return self.REAL_DATAS[id][0] - self.STARTT
-      return None
+      if _id % 50000 == 0: print_debug(_id)
+      start_time, end_time = self._readNextTimings()
+      if start_time is None: return None
+      
+      if _id == 2: 
+        self.STARTT = start_time
+        self.REAL_DATAS_ENDS[1] = end_time - self.STARTT
+
+        start_time, end_time = self._readNextTimings()
+
+      self.REAL_DATAS_ENDS[_id] = end_time - self.STARTT
+
+      print_debug("A:",start_time -self.STARTT, "C:", end_time - self.STARTT)
+      return start_time - self.STARTT
     else:
       return self.t + expovariate(self.LAMBDA)
 
-  def getCompletionTime(self,id):
+  def getCompletionTime(self,_id):
     if self.USE_REAL_DATAS:
-      if id < self.LEN_REAL_DATAS:
-        if id > 15000: print_debug(f"completed: {id}/{len(self.REAL_DATAS)}")
-        # print(f"get end {id}: {self.getArrivalTime(id)} -> {self.t + (self.REAL_DATAS[id][1] - self.REAL_DATAS[id][0])} - {self.REAL_DATAS[id][2]}")
-        # print(f"get end: {self.t + self.REAL_DATAS[id][1] - self.REAL_DATAS[id][0]}")
-        return self.t + (self.REAL_DATAS[id][1] - self.REAL_DATAS[id][0])
-      return None
+      res = self.REAL_DATAS_ENDS[_id]
+      del self.REAL_DATAS_ENDS[_id]
+      return res
     else:
       return self.t + expovariate(1)
   
@@ -171,26 +197,33 @@ def start(LAMBDA = 0.7, MAXT = 1000000, NSAMPLINGS = 1001, QUEUE_NUMBER = 100, C
     csv_file = open(REAL_DATAS, mode='r')
   
   state = State(LAMBDA, MAXT, QUEUE_NUMBER, CHOICES, NSAMPLINGS = NSAMPLINGS, LOCALITY=LOCALITY, REAL_DATAS = csv_file)
-  if csv_file is not None:
-    csv_file.close()
+  
   events = state.events
 
-  for t in range((state.MAXT)//state.NSAMPLINGS, state.MAXT, (state.MAXT)//state.NSAMPLINGS):
-    heappush(state.events, (t, (0, -1)))
+  if REAL_DATAS is None:
+    for t in range((state.MAXT)//state.NSAMPLINGS, state.MAXT, (state.MAXT)//state.NSAMPLINGS):
+      heappush(state.events, (t, (0, -1)))
+  else:
+    for t in range(0, 1000000000, 100000):
+      heappush(state.events, (t, (0, -1)))
 
   start = time.time()
 
   print(f"Starting:\n\tLAMBDA = {LAMBDA},\n\tMAXT = {state.MAXT},\n\tNSAMPLINGS = {NSAMPLINGS},\n\tQUEUE_NUMBER = {QUEUE_NUMBER},\n\tCHOICES = {CHOICES}\n")
 
-  while events:
+  c = True
+  while events and c:
     t, event = heappop(events)
     # if t > MAXT:
     #   break
     
     state.t = t
-    process(state, event)
+    c = process(state, event)
     del event
   
+  if csv_file is not None:
+    csv_file.close()
+
   end = time.time()
   print(end - start)
   
@@ -204,22 +237,3 @@ def main():
 
 if __name__ == '__main__':
   main()
-
-# state = start(LAMBDA, MAXT)
-
-# deltas = {}
-# values_sum = 0
-# values_count = 0
-# for k_arr, v_arr in state.arrivals.items():
-# 	dt = state.completions[k_arr] - v_arr
-# 	deltas[k_arr] = dt
-# 	values_sum += dt
-# 	values_count += 1
-
-# mean = values_sum / values_count
-
-# print(f"Mean time is : {mean}")
-# print(f"Mean time expected is : {1/(1-LAMBDA)}")
-
-# process state.arrivals and state.completions, find average time spent
-# in the system, and compare it with the theoretical value of 1 / (1 - LAMBDA)

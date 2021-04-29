@@ -1,4 +1,4 @@
-import sys, hjson, json, re, argparse
+import sys, hjson, json, re, argparse, time
 from math import sqrt
 import os.path, multiprocessing, random
 from joblib import Parallel, delayed
@@ -55,12 +55,12 @@ def calc(results, lam):
   if slam not in results:
     results[slam] = {}
   
-  for q_num in [100]:
+  for q_num in [50]:
     sq_num = str(q_num)
     if sq_num not in results[slam]:
       results[slam][sq_num] = {}
 
-    for cho in [1,2,5,10]:
+    for cho in [1,2,3,5,10]:
       if q_num == 2 and cho != 2: continue
       if q_num == 3 and cho != 3: continue
       if q_num == 5 and cho != 5: continue
@@ -77,13 +77,13 @@ def calc(results, lam):
       state = mmm.start(LAMBDA = lam, MAXT = MAXT, NSAMPLINGS = NSAMPLINGS, QUEUE_NUMBER = q_num, CHOICES = cho, LOCALITY=args.locality, REAL_DATAS=args.realdata, DEBUG = args.debug)
       samplings = state.samplings
 
+      if args.realdata is not None:
+        results["metadata"]["NSAMPLINGS"] = len(samplings)
+
       print("state: ", state.values_sum, state.values_count)
 
       values_sum = state.values_sum
       values_count = state.values_count
-      # for k_arr, v_arr in state.arrivals.items(): 
-      #   values_sum += state.completions[k_arr] - v_arr
-      #   values_count += 1
       
       del state
 
@@ -136,12 +136,13 @@ elif args.mode == 'mmn':
   results["metadata"] = {}
   results["metadata"]["NSAMPLINGS"] = NSAMPLINGS
   results["metadata"]["MAXT"] = MAXT
+  results["metadata"]["datetime"] = time.ctime()
+  if args.realdata is not None:
+    results["metadata"]["real_data"] = args.realdata
 
-  # for lam in [0.5,0.7,0.8,0.9,0.95,0.99]:
-    # calc(results, lam)
-  res = Parallel(n_jobs=num_cores)(delayed(calc)(results, lam) for lam in [0.07])
+  res = Parallel(n_jobs=num_cores)(delayed(calc)(results, lam) for lam in [1.0])
 
-  for lam in [0.07]:
+  for lam in [1.0]:
     slam = str(lam)
     if slam not in results:
       results[slam] = {}
@@ -166,92 +167,4 @@ elif args.mode == 'mmn':
       s = re.sub(r'(\s+)},\s+', r'\1},\n\1', s)
       s = re.sub(r'(\s+)"(.*),\s"', r'\1"\2\1"', s)
       f.write(s)
-
-elif args.mode == 'mmm':
-  import mmm_2 as mmm
-
-  final_res = [0 for i in range(16)]
-  laststate = None
-
-  MAXT = 1000000
-  NSAMPLINGS = 11
-  QUEUE_NUMBER = 100
-  CHOICES = 2
-
-  results["metadata"] = {}
-  results["metadata"]["NSAMPLINGS"] = NSAMPLINGS
-  results["metadata"]["MAXT"] = MAXT
-
-  
-  for lam in [0.5,0.7,0.8,0.9,0.95,0.99]:
-    slam = str(lam)
-    results[slam] = {}
-    results[slam]['queue_lens'] = []
-    results[slam]['ts'] = []
-
-    try:
-      state, samplings = mmm.start(lam, MAXT, NSAMPLINGS, QUEUE_NUMBER=QUEUE_NUMBER, CHOICES=CHOICES)
-      for x in samplings:
-        results[slam]['queue_lens'].append(x['queue_len'])
-        results[slam]['ts'].append(x['t'])
-      laststate = state
-    except TypeError as e:
-      print("error", e)
-      continue
-    
-    with open('results/mmm_lengths.hjson','w') as f:
-      s = re.sub(r'([,\[])\s+', r'\1 ', json.dumps(results, indent=2))
-      s = re.sub(r'(\s+)],\s+', r'],\1', s)
-      s = re.sub(r'(\s+)},\s+', r'\1},\n\1', s)
-      s = re.sub(r'(\s+)"(.*),\s"', r'\1"\2\1"', s)
-      f.write(s)
-
-    # print(k, len(samplings), [samplings[h]["t"] for h in range(len(samplings))], end="\r")
-    # state, samplings = mmm.start(0.5, 100000, 100, 10, 1) -> http://www.graphreader.com/plotter?x=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15&y=1.0,0.4653,0.2376,0.1227,0.0613,0.0425,0.0168,0.0099,0.0029,0.0019,0.0,0.0,0.0,0.0,0.0,0.0
-
-    tot_len = [0 for i in range(16)]
-    for x in samplings:
-      for i in x['queue_len']:
-        if i > 15 : continue
-        tot_len[i] += 1
-    tmp = 0
-
-    values = []
-    for n,i in enumerate(tot_len[::-1]):
-      tmp += i
-      
-      values.append(tmp)
-    # print("mean: ", tot_len/len(samplings))
-
-    values = values[::-1]
-    for i in range(len(tot_len)):
-      final_res[i] += values[i]
-
-  x = [i for i in range(16)]
-  y = [final_res[i]/final_res[0] for i in range(16)]
-
-  deltas = {}
-  values_sum = 0
-  values_count = 0
-  for k_arr, v_arr in laststate.completions.items():
-    dt = v_arr - laststate.arrivals[k_arr]
-    deltas[k_arr] = dt
-    values_sum += dt
-    values_count += 1
-
-  mean = values_sum / values_count
-
-
-  print(f"Mean time is : {mean}")
-
-  #plt.plot(x,y,'b-')
-  print(final_res)
-  print(x, y)
-
-  pass
-
-
-
-
-
 
