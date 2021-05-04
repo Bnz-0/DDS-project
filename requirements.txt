@@ -1,1 +1,6 @@
+numpy
 matplotlib
+joblib
+hjson
+python-dateutil
+web3
